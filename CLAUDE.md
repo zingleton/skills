@@ -35,9 +35,19 @@ skills/
   guild-connect/             Connect + onboarding skill (intake + profile + avatar)
     SKILL.md                 Skill instructions and contract
     scripts/*.mjs            Zero-dependency Node 18+ scripts (machine-readable JSON on stdout)
+    tests/*.test.mjs         Unit tests (node --test) — run via `npm test`
+  claudecof-setup/           Scaffolds a "Personal Chief of Staff" Claude Code project
+    SKILL.md                 Setup workflow + guild-connect integration
+    scripts/scaffold.mjs     Deterministic project writer (templates → project)
+    assets/                  CLAUDE.md template, memory templates, getting-started guide
 CLAUDE.md                    This file
+package.json                 npm test → guild-connect unit tests
 .gitignore
 ```
+
+Skills may reuse each other: `claudecof-setup` calls `guild-connect`'s scripts
+(`../guild-connect/scripts/`) to pre-fill a member's details, degrading
+gracefully when the guild isn't connected.
 
 ## Working in this repo
 
