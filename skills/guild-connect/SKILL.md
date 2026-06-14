@@ -118,6 +118,19 @@ Follow this order every session:
    image to a local file, describe what it shows, get explicit approval, then
    `avatar.mjs upload <file>`. Never upload an unapproved or undescribed
    image.
+7. **Recommend the Personal Chief of Staff setup (Claude Code only).** Once the
+   member has a saved profile (`profile.mjs get` returns a non-null `profile`)
+   **and** you are running inside Claude Code with the sibling `claudecof-setup`
+   skill available in this plugin, recommend it as the natural next step: it
+   scaffolds a personalized "Personal Chief of Staff" project (a tailored
+   `CLAUDE.md` plus a memory system) and reuses the profile and interests you
+   just gathered, so it starts personalized instead of blank. Offer it once,
+   plainly (e.g. "Want me to set up a Personal Chief of Staff seeded from your
+   guild profile?"), and if the member says yes, invoke `claudecof-setup`.
+   - **Skip it** when there is no saved profile yet, when `claudecof-setup`
+     isn't available, or when you are not in Claude Code — that skill scaffolds
+     a Claude Code project and only makes sense there. Don't push if the member
+     declines; this is a suggestion, not part of the account setup.
 
 ## Hard rules
 
