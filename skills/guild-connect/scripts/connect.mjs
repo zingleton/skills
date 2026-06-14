@@ -3,9 +3,9 @@
 //
 // Links this environment to an AI Power Guild account:
 //   1. asks for the member's email,
-//   2. requests a SIGN-IN-ONLY emailed code (create_user: false — nothing is
-//      ever created from the terminal; unknown emails are sent to the unlisted
-//      signup page),
+//   2. requests an emailed code (create_user: true — an unknown email is
+//      created here and confirmed when the code is verified; a known email
+//      just gets a sign-in code),
 //   3. verifies the code (3 attempts, then a fresh code is required),
 //   4. writes the shared credential file and verifies it round-trip with one
 //      authenticated API call.
@@ -29,12 +29,12 @@
 // bodies are never echoed (responses are mapped to branch copy via the
 // classifiers below — no error_description, no emails, no user ids). The JSON
 // emitted by the subcommands carries only a `status` string and public hints
-// (signup_url, credential path) — never tokens.
+// (credential path) — never tokens.
 
 import { createInterface } from "node:readline/promises";
 import { stdin, stdout } from "node:process";
 import { pathToFileURL } from "node:url";
-import { SUPABASE_URL, ANON_KEY, SIGNUP_URL } from "./config.mjs";
+import { SUPABASE_URL, ANON_KEY } from "./config.mjs";
 import {
   CREDENTIALS_VERSION,
   ReconnectRequired,
@@ -81,15 +81,16 @@ function safeMessage(err) {
 // ---------------------------------------------------------------------------
 
 /**
- * Classify the response to POST /auth/v1/otp (sign-in-only).
- * → "sent" | "unknown_email" | "code_already_pending" | "stale_key" | "error"
+ * Classify the response to POST /auth/v1/otp (create_user: true — signup or sign-in).
+ * → "sent" | "signups_closed" | "code_already_pending" | "stale_key" | "error"
  */
 export function classifyOtpSendResponse(status, errorCode) {
   if (status >= 200 && status < 300) return "sent";
-  // Sign-in-only refusal for an address with no account. Observed:
+  // Signups disabled at the project level (enable_signup = false): even with
+  // create_user: true an unknown address cannot be created. Observed:
   // 422 {"error_code":"otp_disabled","msg":"Signups not allowed for otp"}.
   if (errorCode === "otp_disabled" || errorCode === "user_not_found") {
-    return "unknown_email";
+    return "signups_closed";
   }
   // A code was recently sent / rate limited (max_frequency class). Observed:
   // 429 {"error_code":"over_email_send_rate_limit"}.
@@ -162,15 +163,6 @@ function buildCreds(session, fallbackEmail) {
 }
 
 /**
- * The signup page URL with the member's email pre-filled, so they don't retype
- * it on the web form. `encodeURIComponent` matters: a "+" in an address (e.g.
- * andy+1@example.com) must arrive as %2B, not a space.
- */
-function signupUrlFor(email) {
-  return `${SIGNUP_URL}?email=${encodeURIComponent(email)}`;
-}
-
-/**
  * Non-interactive output: human-readable lines to stderr, one machine-readable
  * JSON object to stdout. Mirrors the rest of the skill's stdout/stderr split so
  * an agent reads stdout and a person reads stderr. NEVER carries token material.
@@ -188,7 +180,7 @@ function emit(obj, stderrLines = []) {
 async function status() {
   const existing = await readCredentials();
   if (!existing) {
-    emit({ ok: false, status: "not_connected", signup_url: SIGNUP_URL }, [
+    emit({ ok: false, status: "not_connected" }, [
       "Not connected. Run connect (interactive) or connect.mjs send <email> to link an account.",
     ]);
     return 1;
@@ -216,8 +208,9 @@ async function status() {
 }
 
 /**
- * `send <email>` — request a SIGN-IN-ONLY code (create_user: false; account
- * creation only ever happens on the signup page). One shot, no prompt.
+ * `send <email>` — request an emailed code (create_user: true). An unknown
+ * email is created here and confirmed on verify; a known email gets a sign-in
+ * code. One shot, no prompt.
  */
 async function sendCode(emailRaw) {
   const email = (emailRaw ?? "").trim();
@@ -227,7 +220,7 @@ async function sendCode(emailRaw) {
     ]);
     return 1;
   }
-  const send = await gotrue("/auth/v1/otp", { email, create_user: false });
+  const send = await gotrue("/auth/v1/otp", { email, create_user: true });
   switch (classifyOtpSendResponse(send.status, send.body?.error_code ?? null)) {
     case "sent":
       emit({ ok: true, status: "sent", email }, [
@@ -235,19 +228,12 @@ async function sendCode(emailRaw) {
         "Redeem it with: node connect.mjs verify <email> <code> (use the NEWEST email).",
       ]);
       return 0;
-    case "unknown_email": {
-      // Submitting the email on the signup page creates the account AND emails
-      // a 6-digit code (the page's own send). So the next step is to VERIFY
-      // that code — not to send another one.
-      const signupUrl = signupUrlFor(email);
-      emit({ ok: false, status: "unknown_email", signup_url: signupUrl }, [
-        "No guild account exists for that email yet.",
-        `Open this link and submit your email to create your account — it will email you a 6-digit code:`,
-        `  ${signupUrl}`,
-        "Then tell me that code and I'll verify it. There's no need to request another code.",
+    case "signups_closed":
+      emit({ ok: false, status: "signups_closed" }, [
+        "Guild signups are currently closed, so a new account can't be created right now.",
+        "If you already have an account, double-check the email address; otherwise try again later or contact the guild.",
       ]);
       return 1;
-    }
     case "code_already_pending":
       emit({ ok: false, status: "code_already_pending" }, [
         "A code was recently sent to that address.",
@@ -372,19 +358,17 @@ async function main() {
       return 1;
     }
 
-    // Sign-in-only: the terminal NEVER creates accounts (R2).
-    const send = await gotrue("/auth/v1/otp", { email, create_user: false });
+    // Create-or-sign-in: an unknown email is created here (the emailed code
+    // confirms it on verify); a known email just gets a sign-in code.
+    const send = await gotrue("/auth/v1/otp", { email, create_user: true });
     const branch = classifyOtpSendResponse(send.status, send.body?.error_code ?? null);
     switch (branch) {
       case "sent":
         say(`We emailed a 6-digit code to ${email}.`);
         break;
-      case "unknown_email":
-        say("No guild account exists for that email yet.");
-        say("Open this link and submit your email to create your account — it will email you a 6-digit code:");
-        say(`  ${signupUrlFor(email)}`);
-        say("Then verify that code (no need to request another) by running:");
-        say(`  node connect.mjs verify ${email} <code>`);
+      case "signups_closed":
+        say("Guild signups are currently closed, so a new account can't be created right now.");
+        say("If you already have an account, double-check the email address; otherwise try again later or contact the guild.");
         return 1;
       case "code_already_pending":
         say("A code was recently sent to that address.");

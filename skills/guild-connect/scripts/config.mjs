@@ -25,6 +25,3 @@ export const ANON_KEY =
 export const SITE_URL = trimSlash(
   process.env.GUILD_SITE_URL || "https://pg.singleton.ai",
 );
-
-/** Where a person without an account creates one (the unlisted page, U6). */
-export const SIGNUP_URL = `${SITE_URL}/signup`;

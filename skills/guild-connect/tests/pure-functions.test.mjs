@@ -20,9 +20,9 @@ test("OTP send: 200 → sent", () => {
   assert.equal(classifyOtpSendResponse(204, null), "sent");
 });
 
-test("OTP send: sign-in-only refusal for unknown email → unknown_email", () => {
-  assert.equal(classifyOtpSendResponse(422, "otp_disabled"), "unknown_email");
-  assert.equal(classifyOtpSendResponse(400, "user_not_found"), "unknown_email");
+test("OTP send: signups disabled at project level → signups_closed", () => {
+  assert.equal(classifyOtpSendResponse(422, "otp_disabled"), "signups_closed");
+  assert.equal(classifyOtpSendResponse(400, "user_not_found"), "signups_closed");
 });
 
 test("OTP send: rate limit / pending code → code_already_pending", () => {
