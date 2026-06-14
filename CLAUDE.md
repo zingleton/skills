@@ -22,10 +22,11 @@ repo (the path differs per machine):
 
 Deployed at **https://pg.singleton.ai**.
 
-The app is a Next.js + Supabase project. Conceptual docs live in its `reference/`
-subdirectory; the skills' canonical source is its `skills/` subdirectory. When a
-skill's API contract is unclear, read the app's route handlers and `reference/`
-docs rather than guessing.
+The app is a Next.js + Supabase project that exposes the server-side `/api/*`
+routes the skills call, plus `llms.txt` documentation describing them. **The
+skills live here, in this repository — this is their single source of truth.**
+The app no longer carries a `skills/` copy. When a skill's API contract is
+unclear, read the app's route handlers and its `llms.txt` rather than guessing.
 
 ## Repository layout
 
@@ -62,9 +63,10 @@ gracefully when the guild isn't connected.
   (`$AI_POWER_GUILD_CREDENTIALS_PATH` → `~/.config/ai-power-guild/credentials.json`,
   file `0600`). Future skills import its `credentials.mjs` / `api.mjs` instead of
   re-implementing auth or token handling.
-- **Keep skills in sync with the app.** The authoritative copy of `guild-connect`
-  ships from the app repo (`../aisupply/skills/guild-connect`). When the app's API
-  changes, update both. Do not let this copy silently drift.
+- **This repository is the single source of truth for the skills.** They used to
+  be mirrored in the app repo (`../aisupply/skills/`); that copy is being removed.
+  Develop skills here and publish them via the marketplace. When the app's `/api`
+  contract changes, update the skills here to match — there is no second copy.
 - **Security rules carry over from `guild-connect/SKILL.md`:** never print tokens,
   `Authorization` headers, or raw error bodies; never export tokens to env vars or
   copy the credential file; surface the `Acting as <email>` banner each session.
