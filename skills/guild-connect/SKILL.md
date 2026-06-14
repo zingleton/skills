@@ -82,10 +82,17 @@ Follow this order every session:
      and relay it to you, then `connect.mjs verify <email> <code>`. On
      `bad_code` request a fresh code (`send` again) and verify the newest one —
      never loop on a stale code.
-   - On `unknown_email` (or a `signup_url` in any response), the member has no
-     account — send them to that page in a browser to create one, then start
-     this step again. Never try to create an account from the terminal; it is
-     not possible by design.
+   - On `unknown_email`, the member has no account yet. The `signup_url` in the
+     response is **pre-filled with their email** — give them that exact link and
+     ask them to open it and submit their email. That creates their account and
+     emails them a 6-digit code (the signup page sends it). They do NOT need to
+     type the code into the web page — have them read it back to you. Then go
+     straight to `connect.mjs verify <email> <code>` with that code. **Do NOT
+     run `send` again** — the signup already sent the code; telling the member
+     you'll "send another code" is wrong. Only if `verify` returns `bad_code`
+     (the code was used on the web or expired) do you `send` a fresh sign-in
+     code — the account now exists, so it succeeds — and verify that. Never
+     create an account from the terminal; it is not possible by design.
    - On `stale_skill`, the skill copy is outdated — tell the member to update
      guild-connect.
    (A human running this themselves can instead use bare `connect.mjs` and type

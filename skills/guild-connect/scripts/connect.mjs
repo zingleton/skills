@@ -162,6 +162,15 @@ function buildCreds(session, fallbackEmail) {
 }
 
 /**
+ * The signup page URL with the member's email pre-filled, so they don't retype
+ * it on the web form. `encodeURIComponent` matters: a "+" in an address (e.g.
+ * andy+1@example.com) must arrive as %2B, not a space.
+ */
+function signupUrlFor(email) {
+  return `${SIGNUP_URL}?email=${encodeURIComponent(email)}`;
+}
+
+/**
  * Non-interactive output: human-readable lines to stderr, one machine-readable
  * JSON object to stdout. Mirrors the rest of the skill's stdout/stderr split so
  * an agent reads stdout and a person reads stderr. NEVER carries token material.
@@ -226,12 +235,19 @@ async function sendCode(emailRaw) {
         "Redeem it with: node connect.mjs verify <email> <code> (use the NEWEST email).",
       ]);
       return 0;
-    case "unknown_email":
-      emit({ ok: false, status: "unknown_email", signup_url: SIGNUP_URL }, [
-        "No guild account exists for that email address.",
-        `Create one at ${SIGNUP_URL} — then run send again.`,
+    case "unknown_email": {
+      // Submitting the email on the signup page creates the account AND emails
+      // a 6-digit code (the page's own send). So the next step is to VERIFY
+      // that code — not to send another one.
+      const signupUrl = signupUrlFor(email);
+      emit({ ok: false, status: "unknown_email", signup_url: signupUrl }, [
+        "No guild account exists for that email yet.",
+        `Open this link and submit your email to create your account — it will email you a 6-digit code:`,
+        `  ${signupUrl}`,
+        "Then tell me that code and I'll verify it. There's no need to request another code.",
       ]);
       return 1;
+    }
     case "code_already_pending":
       emit({ ok: false, status: "code_already_pending" }, [
         "A code was recently sent to that address.",
@@ -364,8 +380,11 @@ async function main() {
         say(`We emailed a 6-digit code to ${email}.`);
         break;
       case "unknown_email":
-        say("No guild account exists for that email address.");
-        say(`Create one at ${SIGNUP_URL} — then run connect again.`);
+        say("No guild account exists for that email yet.");
+        say("Open this link and submit your email to create your account — it will email you a 6-digit code:");
+        say(`  ${signupUrlFor(email)}`);
+        say("Then verify that code (no need to request another) by running:");
+        say(`  node connect.mjs verify ${email} <code>`);
         return 1;
       case "code_already_pending":
         say("A code was recently sent to that address.");
