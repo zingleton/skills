@@ -43,6 +43,10 @@ CLAUDE.md                    This file
 
 - **Skills are the product.** Each skill is a directory under `skills/` with a
   `SKILL.md` and its supporting scripts.
+- **Verify with `npm test`** (Node's built-in runner, zero dependencies). It
+  runs the `guild-connect` unit tests — credential store/lock/refresh, the
+  API 401/redaction discipline, and the pure helpers. Run it after touching any
+  script under `skills/`.
 - **`guild-connect` is canonical and shared.** It owns the credential file contract
   (`$AI_POWER_GUILD_CREDENTIALS_PATH` → `~/.config/ai-power-guild/credentials.json`,
   file `0600`). Future skills import its `credentials.mjs` / `api.mjs` instead of

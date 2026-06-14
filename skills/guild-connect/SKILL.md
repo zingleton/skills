@@ -26,7 +26,10 @@ interactive on stdout).
 
 | Command | What it does |
 | --- | --- |
-| `node scripts/connect.mjs` | Interactive: email → emailed 6-digit code → credential saved + verified. Re-running verifies an existing connection instead of re-prompting. |
+| `node scripts/connect.mjs` | Interactive (human at a terminal): email → emailed 6-digit code → credential saved + verified. Re-running verifies an existing connection instead of re-prompting. **Do not use this form from an agent harness** — it blocks on stdin for a code that only arrives after the email step. Use the trio below instead. |
+| `node scripts/connect.mjs status` | Non-interactive connection check. `{ok: true, status: "connected", email}` when live; `{ok: false, status: "not_connected", signup_url}` when no credential; `{ok: false, status: "reconnect_required"}` when the stored session is dead (the file is cleared). JSON on stdout, `Acting as`/copy on stderr. This is the agent's connect-check — it never prompts. |
+| `node scripts/connect.mjs send <email>` | Non-interactive: request a SIGN-IN-ONLY code (never creates accounts). `status`: `sent` \| `unknown_email` (carries `signup_url`) \| `code_already_pending` \| `stale_skill` \| `invalid_email` \| `error`. |
+| `node scripts/connect.mjs verify <email> <code>` | Non-interactive: redeem ONE code from the newest `send` email, then save + round-trip + API-verify the credential. `status`: `connected` \| `bad_code` (request a fresh code and verify again) \| `save_failed` (carries `path`) \| `verify_failed` \| `error`. No in-process retry — one attempt per call. |
 | `node scripts/profile.mjs get` | `{ok, profile}` — the member's public profile row, or `profile: null` if never saved. |
 | `node scripts/profile.mjs set '<json>'` | Read-merge-write profile save. Keys: `displayName`, `websiteUrl`, `linkedinUrl`, `youtubeUrl`, `description`. Photo never changes here. |
 | `node scripts/interests.mjs get` | `{ok, intake}` — submission + interests, or `intake: null` when the member has not done the intake. |
@@ -38,6 +41,17 @@ interactive on stdout).
 
 ### Contract notes
 
+- **Two different "profile" endpoints — don't cross them.** The app exposes two
+  surfaces that both say "profile", and the scripts map to them 1:1:
+  - **Intake interests** → `/api/profile` → `interests.mjs get/set` (and the
+    base `intake.mjs create` reads/writes). Holds `role_key`, `email_cadence`,
+    `deliverable_interests`, `task_interests`, `pain_point`. `interests.mjs get`
+    returns `{ok, intake}`.
+  - **Public profile** → `/api/user-profile` (+ `/avatar`) → `profile.mjs` and
+    `avatar.mjs`. Holds `displayName`, links, `description`, photo.
+    `profile.mjs get` returns `{ok, profile}`.
+  Pick the script by which data you mean, not by the word "profile": editing the
+  display name is `profile.mjs`; editing the email cadence is `interests.mjs`.
 - **Success shapes.** `intake.mjs create` → `{ok: true, id}` (201). The
   read-merge-write saves (`interests.mjs set`, `profile.mjs set`,
   `avatar.mjs remove`) → `{ok: true}` / `{ok: true, profile}`.
@@ -59,13 +73,24 @@ interactive on stdout).
 
 Follow this order every session:
 
-1. **Connect check.** Run `connect.mjs`. If it prints `Already connected as
-   <email>` and verifies, continue. If it needs input, relay its prompts to
-   the member and type their answers at the script's own prompt (where the
-   harness allows interactive stdin; otherwise pipe the answers in the order
-   asked). If it prints a signup URL, the member has no account — send them
-   to that page in a browser, then run connect again. Never try to create an
-   account from the terminal; it is not possible by design.
+1. **Connect check.** Run `connect.mjs status`. On `status: "connected"`,
+   continue. On `not_connected` or `reconnect_required`, link the account with
+   the non-interactive two-step (one process can't pause for an emailed code):
+   - Ask the member for the email on their guild account, then
+     `connect.mjs send <email>`.
+   - On `sent`, ask the member to read the 6-digit code from the NEWEST email
+     and relay it to you, then `connect.mjs verify <email> <code>`. On
+     `bad_code` request a fresh code (`send` again) and verify the newest one —
+     never loop on a stale code.
+   - On `unknown_email` (or a `signup_url` in any response), the member has no
+     account — send them to that page in a browser to create one, then start
+     this step again. Never try to create an account from the terminal; it is
+     not possible by design.
+   - On `stale_skill`, the skill copy is outdated — tell the member to update
+     guild-connect.
+   (A human running this themselves can instead use bare `connect.mjs` and type
+   the code at its own prompt; the two-step above is the path for agent
+   harnesses, where interactive stdin isn't available.)
 2. **Read state.** `interests.mjs get`.
 3. **If `intake` is `null` → intake interview.**
    - `intake.mjs options` for roles; help the member pick ONE role (show
@@ -111,9 +136,11 @@ Follow this order every session:
   *path* (locked-down harnesses), never token material.
 - **"Acting as <email>"** — every command prints it on stderr; surface it to
   the member at the start of a session so they know which account is live.
-- **Codes are typed at the script's own prompt** where the harness allows.
-  Never ask the member to paste a code into chat if connect.mjs can read it
-  directly.
+- **Codes go straight to `verify`, never into your own memory or logs.** When
+  a human runs bare `connect.mjs`, they type the code at the script's own
+  prompt — don't ask them to paste it into chat. In an agent harness the member
+  relays the code once and you pass it directly to `connect.mjs verify`; use it
+  for that single call and never echo it back.
 - **Concurrent connects are unsupported.** A new code request supersedes the
   pending one — always use the newest email, and run one connect at a time.
 - **One connect per environment.** Don't copy `credentials.json` between

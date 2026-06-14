@@ -31,7 +31,7 @@ const SET_KEYS = [
  * entry must carry a non-empty string id and a real boolean `interested` —
  * otherwise a typo'd entry would silently merge as interested:false.
  */
-function validateInterestEdits(edits, key, idKey, usage) {
+export function validateInterestEdits(edits, key, idKey, usage) {
   if (edits === undefined) return;
   if (!Array.isArray(edits)) {
     throw new Error(`"${key}" must be an array. ${usage}`);
@@ -51,7 +51,7 @@ function validateInterestEdits(edits, key, idKey, usage) {
   }
 }
 
-function mergeById(existing, edits, idKey) {
+export function mergeById(existing, edits, idKey) {
   if (!Array.isArray(edits)) return existing;
   const merged = existing.map((row) => {
     const override = edits.find((e) => e?.[idKey] === row[idKey]);

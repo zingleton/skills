@@ -71,3 +71,23 @@ once.
 
 The pre-ship operational checklist (email template slots, hosted OTP expiry,
 custom SMTP, embedded key verification) lives in `SKILL.md`.
+
+## Tests
+
+`tests/` holds the standalone unit tests (Node's built-in runner, zero
+dependencies). Run them from the repo root with `npm test`, or directly:
+
+```
+node --test "skills/guild-connect/tests/**/*.test.mjs"
+```
+
+Coverage: the credential store + sidecar lock + rotation-safe refresh
+(`credentials.test.mjs`), the 401 → single-refresh-retry + redaction discipline
+(`api.test.mjs`), and the pure helpers — connect classifiers, `sniffImageType`,
+`mergeById` / `validateInterestEdits`, `parseJsonArg` (`pure-functions.test.mjs`).
+Refresh is exercised through an injected `fetch`; nothing hits the network.
+Unix-permission (`0600`/`0700`) and chmod-based write-failure assertions are
+skipped on Windows, where those modes aren't enforced — they run on POSIX/CI.
+The end-to-end tests that drive the real scripts against a live Supabase stack
+live in the app repo (`tests/skill-credentials.test.ts`, section 5); they can't
+run standalone because they import the app's route handlers and DB types.

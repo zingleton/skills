@@ -1,0 +1,10 @@
+{
+  "name": "ai-power-guild-plugin",
+  "version": "0.1.0",
+  "description": "Claude Code plugin packaging AI Power Guild agent skills.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test \"skills/guild-connect/tests/**/*.test.mjs\""
+  }
+}
