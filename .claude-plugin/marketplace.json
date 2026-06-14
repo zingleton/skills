@@ -1,0 +1,17 @@
+{
+  "name": "guild-skills",
+  "owner": {
+    "name": "Andy Singleton",
+    "email": "andy@singleton.ai"
+  },
+  "metadata": {
+    "description": "AI Power Guild agent skills for Claude Code (connect, onboarding, and the Personal Chief of Staff setup)."
+  },
+  "plugins": [
+    {
+      "name": "ai-power-guild",
+      "source": ".",
+      "description": "Connect to the AI Power Guild app, run member onboarding/profile/intake, and scaffold a Personal Chief of Staff project."
+    }
+  ]
+}

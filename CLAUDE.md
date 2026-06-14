@@ -31,6 +31,7 @@ docs rather than guessing.
 
 ```
 .claude-plugin/plugin.json   Plugin manifest (name, version, author)
+.claude-plugin/marketplace.json  Marketplace "guild-skills" — makes the repo installable
 skills/
   guild-connect/             Connect + onboarding skill (intake + profile + avatar)
     SKILL.md                 Skill instructions and contract
