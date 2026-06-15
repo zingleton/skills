@@ -76,7 +76,11 @@ Follow this order every session:
 1. **Connect check.** Run `connect.mjs status`. On `status: "connected"`,
    continue. On `not_connected` or `reconnect_required`, link the account with
    the non-interactive two-step (one process can't pause for an emailed code):
-   - Ask the member for the email on their guild account, then
+   - **If the member already has a code in hand** — they just created an account
+     on the web and were shown (or emailed) an email + 6-digit code — skip `send`
+     and go straight to `connect.mjs verify <email> <code>`. Only fall back to
+     `send` if that returns `bad_code` (the code expired or was already used).
+   - Otherwise, ask the member for the email on their guild account, then
      `connect.mjs send <email>`.
    - On `sent`, ask the member to read the 6-digit code from the NEWEST email
      and relay it to you, then `connect.mjs verify <email> <code>`. On
