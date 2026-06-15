@@ -27,8 +27,8 @@ interactive on stdout).
 | Command | What it does |
 | --- | --- |
 | `node scripts/connect.mjs` | Interactive (human at a terminal): email → emailed 6-digit code → credential saved + verified. Re-running verifies an existing connection instead of re-prompting. **Do not use this form from an agent harness** — it blocks on stdin for a code that only arrives after the email step. Use the trio below instead. |
-| `node scripts/connect.mjs status` | Non-interactive connection check. `{ok: true, status: "connected", email}` when live; `{ok: false, status: "not_connected"}` when no credential; `{ok: false, status: "reconnect_required"}` when the stored session is dead (the file is cleared). JSON on stdout, `Acting as`/copy on stderr. This is the agent's connect-check — it never prompts. |
-| `node scripts/connect.mjs send <email>` | Non-interactive: request an emailed code. Creates the account if the email is new (confirmed on verify), or sends a sign-in code if it already exists. `status`: `sent` \| `signups_closed` (project signups are disabled) \| `code_already_pending` \| `stale_skill` \| `invalid_email` \| `error`. |
+| `node scripts/connect.mjs status` | Non-interactive connection check. `{ok: true, status: "connected", email}` when live; `{ok: false, status: "not_connected", signup_url}` when no credential; `{ok: false, status: "reconnect_required"}` when the stored session is dead (the file is cleared). JSON on stdout, `Acting as`/copy on stderr. This is the agent's connect-check — it never prompts. |
+| `node scripts/connect.mjs send <email>` | Non-interactive: request a SIGN-IN-ONLY code (never creates accounts). `status`: `sent` \| `unknown_email` (carries `signup_url`) \| `code_already_pending` \| `stale_skill` \| `invalid_email` \| `error`. |
 | `node scripts/connect.mjs verify <email> <code>` | Non-interactive: redeem ONE code from the newest `send` email, then save + round-trip + API-verify the credential. `status`: `connected` \| `bad_code` (request a fresh code and verify again) \| `save_failed` (carries `path`) \| `verify_failed` \| `error`. No in-process retry — one attempt per call. |
 | `node scripts/profile.mjs get` | `{ok, profile}` — the member's public profile row, or `profile: null` if never saved. |
 | `node scripts/profile.mjs set '<json>'` | Read-merge-write profile save. Keys: `displayName`, `websiteUrl`, `linkedinUrl`, `youtubeUrl`, `description`. Photo never changes here. |
@@ -82,14 +82,17 @@ Follow this order every session:
      and relay it to you, then `connect.mjs verify <email> <code>`. On
      `bad_code` request a fresh code (`send` again) and verify the newest one —
      never loop on a stale code.
-   - A new email is created automatically — there is no separate web signup
-     step. The `sent` path covers both a brand-new account (created now,
-     confirmed when the code is verified) and an existing one (a sign-in code).
-     Either way, relay the emailed code to `connect.mjs verify`.
-   - On `signups_closed`, the guild has disabled new signups at the project
-     level, so a new account can't be created from here. If the member believes
-     they already have an account, double-check the email; otherwise tell them
-     signups are closed and to try again later or contact the guild.
+   - On `unknown_email`, the member has no account yet. The `signup_url` in the
+     response is **pre-filled with their email** — give them that exact link and
+     ask them to open it and submit their email. That creates their account and
+     emails them a 6-digit code (the signup page sends it). They do NOT need to
+     type the code into the web page — have them read it back to you. Then go
+     straight to `connect.mjs verify <email> <code>` with that code. **Do NOT
+     run `send` again** — the signup already sent the code; telling the member
+     you'll "send another code" is wrong. Only if `verify` returns `bad_code`
+     (the code was used on the web or expired) do you `send` a fresh sign-in
+     code — the account now exists, so it succeeds — and verify that. Never
+     create an account from the terminal; it is not possible by design.
    - On `stale_skill`, the skill copy is outdated — tell the member to update
      guild-connect.
    (A human running this themselves can instead use bare `connect.mjs` and type
@@ -188,13 +191,11 @@ publishing, in this order:
    **Magic Link** template slot — without `{{ .Token }}` the member gets only
    a link, never the 6-digit code the script asks for.
 2. **"Confirm signup" template: ALSO add `{{ .Token }}`**, alongside the
-   template's existing confirmation link. New-account codes are delivered
-   through the **Confirm signup** slot (U6 finding) — now both from the
-   `/signup` web page AND from `connect.mjs send` (the terminal creates new
-   accounts directly with `create_user: true`), so this slot must carry the
-   6-digit code or terminal signups dead-end with a link but no code. This is
-   ADDITIVE: keep the existing confirmation link intact — `{{ .ConfirmationURL }}`
-   on a stock dashboard template, or this repo's `{{ .TokenHash }}`-based
+   template's existing confirmation link. New-account codes from the
+   `/signup` page are delivered through the **Confirm signup** slot (U6
+   finding), and that page asks for a code too. This is ADDITIVE: keep the
+   existing confirmation link intact — `{{ .ConfirmationURL }}` on a stock
+   dashboard template, or this repo's `{{ .TokenHash }}`-based
    `/auth/confirm` link (`supabase/templates/confirmation.html`) — so the web
    email-confirm flow keeps working. Do not REMOVE the confirmation link from
    any template.
