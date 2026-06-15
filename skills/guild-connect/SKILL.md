@@ -38,6 +38,7 @@ interactive on stdout).
 | `node scripts/intake.mjs create '<json>'` | Creates the intake submission; success is `{ok: true, id}` (HTTP 201). Payload: `{role_key, email_cadence, deliverable_interests: [{deliverable_type_id, interested}], task_interests: [{task_id, interested}], pain_point?}`. On `reason: "already_has_submission"` switch to edit mode (the submission may already be saved — `interests.mjs get` to check); on `reason: "catalog_changed"` re-fetch options with `--fresh` and re-confirm. |
 | `node scripts/avatar.mjs upload <file>` | Uploads photo bytes (JPEG/PNG/WebP, ≤2MB) after local validation. |
 | `node scripts/avatar.mjs remove` | Removes the current photo (web-parity read-merge-write save with `picture: {state: "removed"}`; the other profile fields are carried through unchanged). |
+| `node scripts/git-setup.mjs` | One-time: provisions the member's Forgejo git access and installs a durable, per-device git credential into the OS store so plain `git clone/pull/push` works with no prompt. Stdout is `{ok, forgejoHost, username, helper, plaintextWarning}` — never the token. Re-running replaces this device's token. |
 
 ### Contract notes
 
@@ -173,6 +174,35 @@ Follow this order every session:
   machines; connect each environment separately.
 - If any command says the connection is no longer valid, run `connect.mjs`
   again — once. Never retry-loop a failing credential.
+
+## Git access (durable git credential)
+
+`git-setup.mjs` installs a **separate, durable git credential** into the OS
+credential store (Git Credential Manager / macOS Keychain / Windows Credential
+Manager / Linux libsecret). After it runs, ordinary `git clone/pull/push` of the
+member's role plugin repo and their private personal repo works with no prompt,
+and a local agent (Codex, Claude Code) reusing the same git client needs **no
+separate auth** — it loads a locally cloned skill repo like any other.
+
+- **One command:** `node scripts/git-setup.mjs`. It calls the app's
+  `/api/account/git-access` route with the stored Guild credential, then pipes
+  the freshly minted token into `git credential approve`. Stdout is
+  `{ok, forgejoHost, username, helper, plaintextWarning}` — the token is never
+  printed.
+- **Host-scoped, per-device, replace-on-rerun.** The token is stored only for the
+  Forgejo host; re-running replaces THIS device's token rather than accumulating.
+  Rotation is member-initiated — re-run `git-setup` to install a fresh token (the
+  server cannot push a credential into your OS store).
+- **One credential per environment — don't copy between machines.** Run
+  `git-setup` on each machine separately.
+- **Lost / shared device:** the credential persists in the OS store. "Disconnect
+  connected devices" on `/account` revokes the member's git tokens; account
+  deletion revokes all forge access. Never run `git-setup` on a shared machine you
+  don't control.
+- **Linux without a secret service** falls back to git's plaintext `store`
+  (`~/.git-credentials`) and the command WARNS about it — protect that machine.
+- **Never print the git token** — `git-setup` pipes it straight into
+  `git credential approve`; quote only the command's own JSON output.
 
 ## Credential file (shared contract for all guild skills)
 

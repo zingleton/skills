@@ -72,6 +72,24 @@ once.
 The pre-ship operational checklist (email template slots, hosted OTP expiry,
 custom SMTP, embedded key verification) lives in `SKILL.md`.
 
+## Git access (durable git credential)
+
+`git-setup.mjs` extends the connection to ordinary git: it provisions the
+member's Forgejo git access and installs a **separate, durable, host-scoped,
+per-device git credential** into the OS credential store via
+`git credential approve`. Afterwards `git clone/pull/push` of the member's role
+plugin repo and private personal repo works with no prompt, and a local agent
+reusing the same git client needs no extra auth.
+
+It reuses the Guild credential through `api.mjs` (a bearer call to
+`/api/account/git-access`) — it never reads or copies the credential file itself.
+The returned git token is piped straight into git and is **never** printed;
+stdout carries only `{ok, forgejoHost, username, helper, plaintextWarning}`.
+Linux hosts with no secret service fall back to git's plaintext `store` with an
+explicit warning. Same "one credential per environment, don't copy between
+machines" rule as the Guild credential; rotation is member-initiated (re-run
+`git-setup`).
+
 ## Tests
 
 `tests/` holds the standalone unit tests (Node's built-in runner, zero
@@ -84,7 +102,9 @@ node --test "skills/guild-connect/tests/**/*.test.mjs"
 Coverage: the credential store + sidecar lock + rotation-safe refresh
 (`credentials.test.mjs`), the 401 → single-refresh-retry + redaction discipline
 (`api.test.mjs`), and the pure helpers — connect classifiers, `sniffImageType`,
-`mergeById` / `validateInterestEdits`, `parseJsonArg` (`pure-functions.test.mjs`).
+`mergeById` / `validateInterestEdits`, `parseJsonArg` (`pure-functions.test.mjs`),
+and the git-credential install flow — host-scoped stdin payload, helper selection,
+token never logged, failure modes (`git-setup.test.mjs`, all deps injected).
 Refresh is exercised through an injected `fetch`; nothing hits the network.
 Unix-permission (`0600`/`0700`) and chmod-based write-failure assertions are
 skipped on Windows, where those modes aren't enforced — they run on POSIX/CI.
