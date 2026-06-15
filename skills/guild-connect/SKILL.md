@@ -76,10 +76,12 @@ Follow this order every session:
 1. **Connect check.** Run `connect.mjs status`. On `status: "connected"`,
    continue. On `not_connected` or `reconnect_required`, link the account with
    the non-interactive two-step (one process can't pause for an emailed code):
-   - **If the member already has a code in hand** — they just created an account
-     on the web and were shown (or emailed) an email + 6-digit code — skip `send`
-     and go straight to `connect.mjs verify <email> <code>`. Only fall back to
-     `send` if that returns `bad_code` (the code expired or was already used).
+   - **If the member already has a code in hand** — they created an account on
+     the web and were shown (or emailed) an email + 6-digit code — skip `send`
+     and go straight to `connect.mjs verify <email> <code>`. If that returns
+     `bad_code` (the code expired or was already used), point them at the
+     **Connect your AI** page (linked from their profile) to get a fresh code,
+     then verify that. A terminal `send <email>` also works if they'd rather.
    - Otherwise, ask the member for the email on their guild account, then
      `connect.mjs send <email>`.
    - On `sent`, ask the member to read the 6-digit code from the NEWEST email
