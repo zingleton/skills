@@ -40,6 +40,7 @@ interactive on stdout).
 | `node scripts/avatar.mjs remove` | Removes the current photo (web-parity read-merge-write save with `picture: {state: "removed"}`; the other profile fields are carried through unchanged). |
 | `node scripts/git-setup.mjs` | One-time: provisions the member's Forgejo git access and installs a durable, per-device git credential into the OS store so plain `git clone/pull/push` works with no prompt. Stdout is `{ok, forgejoHost, username, helper, plaintextWarning}` — never the token. Re-running replaces this device's token. |
 | `node scripts/memory-setup.mjs` | One-time: connects the member's portable memory. Provisions their memory bank, records the endpoint locally (`~/.config/ai-power-guild/memory.json`), and verifies a connection. Stdout is `{ok, dataPlaneUrl, bankId}` — never a token. Capture itself runs through the plugin's hooks (below); re-running just re-verifies. |
+| `node scripts/memory.mjs <search\|list\|export\|forget>` | Manage the member's memory. `search <query>` → semantic matches (each with a `document_id`); `list [--limit N]` → stored memories; `export` → the whole corpus as JSON; `forget <documentId>` → delete one memory by its source document. Requires `memory-setup`. To forget something, `search` for it first, then `forget` the matching `document_id`. |
 
 ### Contract notes
 
@@ -231,6 +232,22 @@ accumulates automatically.
 - Codex / other harnesses are not auto-configured yet — they expect a static
   token, which the short-lived-token model doesn't fit; that integration is
   separate (future work).
+
+**Managing memory (`memory.mjs`).** This is the member's primary, agent-native
+surface for their memory — richer than the web `/memory` page (which only offers
+export + delete-all). When the member asks to recall, review, or forget things:
+
+- **Search / recall:** `node scripts/memory.mjs search "<what they asked about>"`
+  → matches, each with a `document_id`. (Capture/recall also happens automatically
+  via the hooks; this is the explicit query path.)
+- **List:** `node scripts/memory.mjs list [--limit N]` → stored memories.
+- **Forget:** to honor "forget X / delete that," FIRST `search` for it, then
+  `forget <document_id>` from a match. Confirm the right entry with the member
+  before deleting. Entries with no `document_id` (derived observations) can't be
+  forgotten individually — point the member at the web page's "Delete all" for a
+  full reset.
+- **Export:** `node scripts/memory.mjs export` → the whole corpus as JSON the
+  member can save. Never paste a member's memory contents anywhere they didn't ask.
 - **Never print the git token** — `git-setup` pipes it straight into
   `git credential approve`; quote only the command's own JSON output.
 

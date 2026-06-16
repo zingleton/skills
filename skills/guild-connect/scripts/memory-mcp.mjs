@@ -73,3 +73,84 @@ export async function recall({ fetch, dataPlaneUrl, bankId, token, query, timeou
 export async function retain({ fetch, dataPlaneUrl, bankId, token, content, timeoutMs = 12000 }) {
   await rpc({ fetch, dataPlaneUrl, bankId, token, name: "sync_retain", args: { content }, timeoutMs });
 }
+
+// ---------------------------------------------------------------------------
+// /v1 REST helpers — member management (memory U9): list, search, delete, export.
+// Same member-token auth; the data plane scopes everything to the member's schema.
+// ---------------------------------------------------------------------------
+
+/** Pick the fields the CLI surfaces from a memory entry (list or recall result). */
+function toEntry(raw) {
+  const r = raw ?? {};
+  return {
+    id: typeof r.id === "string" ? r.id : "",
+    text: typeof r.text === "string" ? r.text : "",
+    fact_type: typeof r.fact_type === "string" ? r.fact_type : "",
+    date: typeof r.date === "string" ? r.date : typeof r.mentioned_at === "string" ? r.mentioned_at : null,
+    document_id: typeof r.document_id === "string" ? r.document_id : null,
+  };
+}
+
+async function v1Fetch({ fetch = globalThis.fetch, dataPlaneUrl, bankId, token, method, path, timeoutMs = 15000 }) {
+  const res = await fetch(`${dataPlaneUrl}/v1/default/banks/${encodeURIComponent(bankId)}${path}`, {
+    method,
+    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  if (res.status === 401 || res.status === 403) throw new Error("memory access rejected");
+  let body = null;
+  const text = await res.text();
+  if (text) {
+    try {
+      body = JSON.parse(text);
+    } catch {
+      body = null;
+    }
+  }
+  return { status: res.status, body };
+}
+
+/** One page of the member's memories. */
+export async function listMemories({ fetch, dataPlaneUrl, bankId, token, limit = 100, offset = 0 }) {
+  const res = await v1Fetch({ fetch, dataPlaneUrl, bankId, token, method: "GET", path: `/memories/list?limit=${limit}&offset=${offset}` });
+  if (res.status !== 200) throw new Error(`memory list failed (HTTP ${res.status})`);
+  const b = res.body ?? {};
+  return { items: Array.isArray(b.items) ? b.items.map(toEntry) : [], total: typeof b.total === "number" ? b.total : 0 };
+}
+
+/** Every memory the member holds, paged — for export. Bounded. */
+export async function listAllMemories({ fetch, dataPlaneUrl, bankId, token, pageSize = 200, maxItems = 5000 }) {
+  const all = [];
+  for (let offset = 0; ; ) {
+    const { items, total } = await listMemories({ fetch, dataPlaneUrl, bankId, token, limit: pageSize, offset });
+    all.push(...items);
+    offset += items.length;
+    if (items.length === 0 || all.length >= total || all.length >= maxItems) break;
+  }
+  return all;
+}
+
+/** Semantic search → structured matches (id, text, document_id) so the AI can pick what to forget. */
+export async function searchMemories({ fetch, dataPlaneUrl, bankId, token, query, timeoutMs = 8000 }) {
+  const result = await rpc({ fetch, dataPlaneUrl, bankId, token, name: "recall", args: { query }, timeoutMs });
+  const out = [];
+  for (const r of result?.structuredContent?.results ?? []) out.push(toEntry(r));
+  if (!out.length && Array.isArray(result?.content)) {
+    for (const c of result.content) {
+      if (c?.type !== "text" || typeof c.text !== "string") continue;
+      try {
+        for (const r of JSON.parse(c.text)?.results ?? []) out.push(toEntry(r));
+      } catch {
+        /* skip */
+      }
+    }
+  }
+  return out.filter((e) => e.text);
+}
+
+/** Forget one memory by its source document (clean delete). Idempotent (404 = ok). */
+export async function deleteDocument({ fetch, dataPlaneUrl, bankId, token, documentId }) {
+  const res = await v1Fetch({ fetch, dataPlaneUrl, bankId, token, method: "DELETE", path: `/documents/${encodeURIComponent(documentId)}` });
+  if (res.status === 200 || res.status === 204 || res.status === 404) return;
+  throw new Error(`memory forget failed (HTTP ${res.status})`);
+}
