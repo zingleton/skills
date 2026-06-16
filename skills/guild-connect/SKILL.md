@@ -39,6 +39,7 @@ interactive on stdout).
 | `node scripts/avatar.mjs upload <file>` | Uploads photo bytes (JPEG/PNG/WebP, ≤2MB) after local validation. |
 | `node scripts/avatar.mjs remove` | Removes the current photo (web-parity read-merge-write save with `picture: {state: "removed"}`; the other profile fields are carried through unchanged). |
 | `node scripts/git-setup.mjs` | One-time: provisions the member's Forgejo git access and installs a durable, per-device git credential into the OS store so plain `git clone/pull/push` works with no prompt. Stdout is `{ok, forgejoHost, username, helper, plaintextWarning}` — never the token. Re-running replaces this device's token. |
+| `node scripts/memory-setup.mjs` | One-time: connects the member's portable memory. Provisions their memory bank, records the endpoint locally (`~/.config/ai-power-guild/memory.json`), and verifies a connection. Stdout is `{ok, dataPlaneUrl, bankId}` — never a token. Capture itself runs through the plugin's hooks (below); re-running just re-verifies. |
 
 ### Contract notes
 
@@ -201,6 +202,35 @@ separate auth** — it loads a locally cloned skill repo like any other.
   don't control.
 - **Linux without a secret service** falls back to git's plaintext `store`
   (`~/.git-credentials`) and the command WARNS about it — protect that machine.
+
+## Portable memory
+
+`memory-setup.mjs` connects the member's **portable memory** — a personal memory
+that follows them across Claude Code sessions (and, later, other assistants),
+backed by the Guild's self-hosted Hindsight server. It is the memory counterpart
+to the git skills repo: skills are curated and version-controlled; memory
+accumulates automatically.
+
+- **One command:** `node scripts/memory-setup.mjs`. It calls
+  `/api/account/memory-access` with the stored Guild credential, records the
+  returned data-plane URL + bank id in `~/.config/ai-power-guild/memory.json`
+  (no secret), and verifies a connection. Stdout is `{ok, dataPlaneUrl, bankId}`.
+- **Capture runs through the plugin's hooks**, not a daemon or a stored token.
+  Installing the `ai-power-guild` plugin registers two Claude Code hooks
+  (`UserPromptSubmit` → recall + inject relevant memory; `Stop` → retain the
+  latest exchange). Each hook mints a **fresh** access token from the durable
+  Guild credential per run — so there is no static token to rotate or leak.
+- **Fail-open by design.** If memory isn't set up, the network is down, or a call
+  is slow, the hooks exit silently and never block or break the session.
+- **Per-member isolation.** The member's token scopes every call to their own
+  memory; no other member can read or write it. Account deletion deletes their
+  memory (right-to-delete); "Disconnect connected devices" ends the sessions that
+  authorize capture.
+- **Per environment:** run `memory-setup` on each machine (it records that
+  machine's endpoint; the durable Guild credential supplies the rotating token).
+- Codex / other harnesses are not auto-configured yet — they expect a static
+  token, which the short-lived-token model doesn't fit; that integration is
+  separate (future work).
 - **Never print the git token** — `git-setup` pipes it straight into
   `git credential approve`; quote only the command's own JSON output.
 
