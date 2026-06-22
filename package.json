@@ -5,6 +5,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test \"skills/guild-connect/tests/**/*.test.mjs\""
+    "test": "node --test \"skills/**/tests/**/*.test.mjs\""
   }
 }
