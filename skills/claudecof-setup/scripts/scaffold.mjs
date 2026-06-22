@@ -29,6 +29,7 @@
 // customized. The Notes guide is seeded only when absent.
 
 import { readFile, writeFile, mkdir, access, cp, symlink } from "node:fs/promises";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -167,15 +168,29 @@ export async function scaffold(cfg) {
   };
 }
 
-async function main(rawJson) {
-  if (!rawJson) throw new Error('Usage: node scaffold.mjs \'<json>\'  (needs at least {"targetDir":"..."})');
-  let cfg;
-  try {
-    cfg = JSON.parse(rawJson);
-  } catch {
-    throw new Error("Argument must be valid JSON.");
-  }
+const USAGE =
+  'Usage: node scaffold.mjs <config.json> | - | \'<json>\'   (needs at least {"targetDir":"..."})';
 
+/**
+ * Read the config from a file path, `-` (stdin), or inline JSON. Prefer a file
+ * path or stdin so the command carries no shell-quoted `'{...}'` — Claude Code's
+ * permission analyzer flags that as un-analyzable and prompts. Inline JSON starts
+ * with `{`, which is never an existing path, so the three forms never collide.
+ */
+export function readJsonArg(raw) {
+  let text = raw;
+  if (raw === "-") text = readFileSync(0, "utf8");
+  else if (raw && existsSync(raw)) text = readFileSync(raw, "utf8");
+  if (!text) throw new Error(USAGE);
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error(`Argument must be valid JSON (inline, a file path, or - for stdin). ${USAGE}`);
+  }
+}
+
+async function main(rawArg) {
+  const cfg = readJsonArg(rawArg);
   const result = await scaffold(cfg);
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
 

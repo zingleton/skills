@@ -50,6 +50,15 @@ the customization values, then calling the scripts.
 
 ## Workflow
 
+> **Passing JSON to the scripts — avoid the permission prompt.** A quoted
+> `'{...}'` argument trips Claude Code's "shell syntax that cannot be statically
+> analyzed" prompt. Instead, write the config to a temp file with the Write tool
+> and pass its **path**: `node scripts/scaffold.mjs <path>/cof-config.json`. A
+> plain path has no braces or quotes for the analyzer to flag. (`repo-setup.mjs`
+> and `scaffold.mjs` also accept `-` to read JSON from stdin, and still accept
+> inline JSON if you ever need it.) The JSON examples below show the *shape* —
+> write that shape to a file and pass the path.
+
 ### 1. Preflight and pick the project location
 
 First, an environment preflight: `node ../guild-connect/scripts/doctor.mjs` —

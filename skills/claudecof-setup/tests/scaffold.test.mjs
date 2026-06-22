@@ -8,7 +8,7 @@ import { mkdtemp, mkdir, writeFile, readFile, rm, access, lstat, realpath } from
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { scaffold, linkSkills, linksBlock } from "../scripts/scaffold.mjs";
+import { scaffold, linkSkills, linksBlock, readJsonArg } from "../scripts/scaffold.mjs";
 
 function tmp() {
   return mkdtemp(join(tmpdir(), "cof-scaffold-"));
@@ -26,6 +26,22 @@ test("linksBlock builds email + links, empty when nothing supplied", () => {
   assert.match(b, /- Email: a@b\.c/);
   assert.match(b, /- Site: https:\/\/x/);
   assert.match(b, /- Link: https:\/\/y/);
+});
+
+// --- readJsonArg (inline | file path) ---------------------------------------
+
+test("readJsonArg accepts inline JSON and a file path", async () => {
+  assert.deepEqual(readJsonArg('{"targetDir":"/x"}'), { targetDir: "/x" });
+  const dir = await tmp();
+  try {
+    const f = join(dir, "cfg.json");
+    await writeFile(f, '{"targetDir":"/y","name":"Ada"}');
+    assert.deepEqual(readJsonArg(f), { targetDir: "/y", name: "Ada" });
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+  // a non-existent path is treated as inline JSON and fails clearly
+  assert.throws(() => readJsonArg("missing.json"), /valid JSON/);
 });
 
 // --- scaffold ---------------------------------------------------------------

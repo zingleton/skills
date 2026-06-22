@@ -12,6 +12,7 @@
 // header, never a raw response body, never GoTrue error detail. Nothing in
 // this module writes to the console.
 
+import { existsSync, readFileSync } from "node:fs";
 import { SITE_URL } from "./config.mjs";
 import {
   ReconnectRequired,
@@ -123,16 +124,39 @@ export async function apiRequest(path, opts = {}) {
 }
 
 /**
- * Parse a CLI JSON argument: required, valid JSON, and a plain object (not
- * an array). Every failure message ends with the caller's usage line.
+ * Parse a CLI JSON argument into a plain object (not an array). Accepts the
+ * JSON three ways so callers can avoid passing a shell-quoted `'{...}'` — which
+ * Claude Code's permission analyzer flags as "shell syntax that cannot be
+ * statically analyzed" and prompts on:
+ *   - `'-'`            → read JSON from stdin
+ *   - a path to a file → read JSON from that file (write it with the Write tool,
+ *                         then pass the path: no braces/quotes in the command)
+ *   - `'{...}'`        → inline JSON (backward compatible; inline JSON starts
+ *                         with `{`, which is never an existing path, so there is
+ *                         no ambiguity)
+ * Every failure message ends with the caller's usage line.
  */
 export function parseJsonArg(raw, usage) {
-  if (!raw) throw new Error(usage);
+  let text = raw;
+  if (raw === "-") {
+    try {
+      text = readFileSync(0, "utf8");
+    } catch {
+      throw new Error(`Couldn't read JSON from stdin. ${usage}`);
+    }
+  } else if (raw && existsSync(raw)) {
+    try {
+      text = readFileSync(raw, "utf8");
+    } catch {
+      throw new Error(`Couldn't read the JSON file. ${usage}`);
+    }
+  }
+  if (!text) throw new Error(usage);
   let parsed;
   try {
-    parsed = JSON.parse(raw);
+    parsed = JSON.parse(text);
   } catch {
-    throw new Error(`Argument must be valid JSON. ${usage}`);
+    throw new Error(`Argument must be valid JSON (inline, a file path, or - for stdin). ${usage}`);
   }
   if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
     throw new Error(`Argument must be a JSON object. ${usage}`);

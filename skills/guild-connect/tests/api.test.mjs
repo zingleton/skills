@@ -6,11 +6,11 @@
 
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, rm, access } from "node:fs/promises";
+import { mkdtemp, rm, access, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { ApiError, getJson, ReconnectRequired } from "../scripts/api.mjs";
+import { ApiError, getJson, ReconnectRequired, parseJsonArg } from "../scripts/api.mjs";
 import { writeCredentials } from "../scripts/credentials.mjs";
 import { SITE_URL } from "../scripts/config.mjs";
 import { sampleCreds, jsonResponse, gotrueRefreshOk } from "./helpers.mjs";
@@ -131,4 +131,32 @@ test("non-JSON error body is never echoed — generic status message only", asyn
   assert.ok(err instanceof ApiError);
   assert.equal(err.status, 502);
   assert.ok(!String(err.message).includes("secret-trace"));
+});
+
+// --- parseJsonArg: inline | file path | stdin (the permission-prompt dodge) ---
+
+test("parseJsonArg accepts inline JSON, a file path, and rejects bad input", async () => {
+  // inline — backward compatible
+  assert.deepEqual(parseJsonArg('{"a":1}', "usage"), { a: 1 });
+
+  // file path — what the SKILLs pass to avoid a shell-quoted '{...}' argument
+  const f = join(tmpBase, "cfg.json");
+  await writeFile(f, '{"targetDir":"/x","name":"Ada"}');
+  assert.deepEqual(parseJsonArg(f, "usage"), { targetDir: "/x", name: "Ada" });
+
+  // a non-existent path string is treated as inline JSON and fails clearly
+  assert.throws(() => parseJsonArg("missing-config.json", "usage-line"), /valid JSON/);
+  // empty / array / null still rejected with the usage line
+  assert.throws(() => parseJsonArg("", "usage-line"), /usage-line/);
+  assert.throws(() => parseJsonArg("[1]", "usage-line"), /JSON object/);
+});
+
+test("parseJsonArg reads a file whose JSON contains shell-significant chars", async () => {
+  // The whole point: braces, quotes, semicolons, ampersands live in the FILE,
+  // never on the command line where the permission analyzer would flag them.
+  const f = join(tmpBase, "cfg2.json");
+  await writeFile(f, JSON.stringify({ aboutMe: 'I "build" things; & more', links: [{ url: "https://x" }] }));
+  const out = parseJsonArg(f, "usage");
+  assert.equal(out.aboutMe, 'I "build" things; & more');
+  assert.equal(out.links[0].url, "https://x");
 });
