@@ -9,7 +9,21 @@ app and help members get set up. The plugin bundles:
   project (a customized `CLAUDE.md` + memory system), pre-filled from your guild
   profile when it's connected.
 
-## Install
+## Paste-to-onboard (recommended)
+
+The simplest way in: **paste one instruction** into a fresh Claude Code session
+and it onboards you end-to-end, then installs the guild skills at **user scope**
+(`~/.claude/skills/`) so they load in every future session — no marketplace, no
+`claude plugin install`.
+
+➡️ **[docs/onboarding-prompt.md](docs/onboarding-prompt.md)** — copy the block
+there and paste it as your first message.
+
+Requires [Claude Code](https://code.claude.com), **Node 18+, and git** on your
+PATH. Re-running the installer (`install-skills.mjs`) is the update path. The
+marketplace plugin below is an **optional** follow-up, not a prerequisite.
+
+## Install (optional marketplace plugin)
 
 > **Install the plugin from your terminal — not from inside a Claude Code
 > session, and don't ask Claude to install it for you.** Plugin installation is
