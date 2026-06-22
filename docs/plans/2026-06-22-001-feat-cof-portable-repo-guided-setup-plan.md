@@ -132,8 +132,8 @@ to a second machine or a second AI installation.
   `'dir'`-type symlinks need Developer Mode/admin and are not safe to rely on. So
   `scaffold` uses `'junction'` on Windows and `'dir'` on POSIX, with an absolute
   target. The recursive-copy fallback is a last resort only (a point-in-time
-  snapshot, not live). One residual: confirm Claude Code's skill *discovery*
-  enumerates through the junction in a real session (see Open Questions).
+  snapshot, not live). Discovery through the junction is confirmed on Windows: a
+  live session loads a `repo/skills` skill via `.claude/skills` (see Open Questions).
 - **The member's `personal` repo is trusted at filesystem level this release.**
   Skills and Tools loaded from `repo/` run with the same trust as any local
   project file; no per-skill approval gate, content-hash verification, or
@@ -439,15 +439,15 @@ flowchart TB
 
 ## Open Questions
 
-- **`repo/skills/` load mechanism — spike done; one residual.** Filesystem
-  mechanism resolved: `fs.symlinkSync(absoluteTarget, link, 'junction')` on
-  Windows (no elevation, transparently traversed) / `'dir'` on POSIX; copy
-  fallback only on `EPERM`/`EEXIST`. Residual to confirm before U3/U4/U6 ship: a
-  fresh Claude Code session pointed at a scaffolded project actually *discovers*
-  skills under the junctioned `.claude/skills` — the filesystem traversal works;
-  the discovery enumeration is the unverified half. If discovery does not follow
-  the link, R14's live "use skills already there" needs different wiring. Plus:
-  does CC re-scan mid-session so a COF-created skill is usable without a restart?
+- **`repo/skills/` load mechanism — RESOLVED (Windows).** Filesystem mechanism:
+  `fs.symlinkSync(absoluteTarget, link, 'junction')` on Windows (no elevation,
+  transparently traversed) / `'dir'` on POSIX; copy fallback only on
+  `EPERM`/`EEXIST`. Discovery confirmed end-to-end: a live Claude Code session
+  launched in a scaffolded project discovers a skill placed in `repo/skills`
+  through the `.claude/skills` junction (verified with a `hello-cof` probe). So
+  R12/R14 hold via the junction. (POSIX symlink path expected to behave the same
+  — confirm opportunistically. Mid-session re-scan is still unverified: a newly
+  created skill may need a session restart to appear.)
 - **Plugin version-drift detection (deferred).** `stale_skill` detects only
   key-migration breakage on the `send` path — not a version check, and never on a
   re-run — so it cannot catch the brainstorm's "stale version / update didn't
