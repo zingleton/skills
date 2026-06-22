@@ -1,4 +1,4 @@
-// guild-connect: memory-mcp.mjs (memory U10).
+// guild-memory: memory-mcp.mjs (memory U10).
 //
 // Thin client for the member's memory data plane — Hindsight's stateless MCP
 // endpoint at {dataPlaneUrl}/mcp/<bankId>/. Each call carries a FRESH Supabase
