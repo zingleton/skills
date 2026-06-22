@@ -24,6 +24,13 @@ with `node`. Stdout is machine-readable JSON; human/status copy and the
 `Acting as <email>` banner go to stderr (except `connect`, which is fully
 interactive on stdout).
 
+**Commands that take a `'<json>'` argument** (`repo-setup`, `interests set`,
+`profile set`, `intake create`) also accept a **file path** or `-` (stdin). Pass
+a path to avoid Claude Code's "shell syntax that cannot be statically analyzed"
+prompt: write the JSON to a temp file with the Write tool, then
+`node scripts/<cmd>.mjs <path>.json`. A plain path has no braces or quotes for
+the permission analyzer to flag; inline JSON still works when you need it.
+
 | Command | What it does |
 | --- | --- |
 | `node scripts/doctor.mjs` | Preflight (run FIRST, before connect): checks Node ≥ 18 and git are present and prints copy-pasteable fixes; exits non-zero if not. No credential, no network. Stdout `{ok, checks}`. Does NOT check plugin freshness (that's not knowable pre-connect — see the choreography note on `stale_skill`). |

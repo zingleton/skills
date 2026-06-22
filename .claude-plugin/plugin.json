@@ -1,7 +1,7 @@
 {
   "name": "ai-power-guild",
   "description": "Agent skills that connect an AI environment to the AI Power Guild app (pg.singleton.ai) and run member onboarding, profile, and intake flows.",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "author": {
     "name": "Andy Singleton",
     "email": "andy@singleton.ai"
