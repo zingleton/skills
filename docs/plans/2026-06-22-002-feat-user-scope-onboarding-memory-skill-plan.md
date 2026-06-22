@@ -1,7 +1,7 @@
 ---
 title: "feat: User-scope onboarding install + extracted Hindsight memory skill"
 type: feat
-status: active
+status: completed
 date: 2026-06-22
 origin: docs/brainstorms/2026-06-22-reliable-onboarding-paste-requirements.md
 ---
