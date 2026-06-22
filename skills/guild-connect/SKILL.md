@@ -48,8 +48,6 @@ the permission analyzer to flag; inline JSON still works when you need it.
 | `node scripts/avatar.mjs remove` | Removes the current photo (web-parity read-merge-write save with `picture: {state: "removed"}`; the other profile fields are carried through unchanged). |
 | `node scripts/git-setup.mjs` | One-time: provisions the member's Forgejo git access and installs a durable, per-device git credential into the OS store so plain `git clone/pull/push` works with no prompt. Stdout is `{ok, forgejoHost, username, helper, plaintextWarning}` — never the token. Re-running replaces this device's token. |
 | `node scripts/repo-setup.mjs '<json>'` | Clones the member's `personal` repo into `<targetDir>/repo` and seeds the COF's durable layer (memory/skills/Tools) — seed-only-if-absent, commit+push only when it seeded, **never pulls** an existing clone (the COF owns its own sync). Takes `{targetDir, forgejoHost, username}`; host+username come from `git-setup`'s stdout — it **never re-mints** the git token. Stdout `{ok, repoDir, cloned, seeded, pushed}`. Safe to re-run. |
-| `node scripts/memory-setup.mjs` | One-time: connects the member's portable memory. Provisions their memory bank, records the endpoint locally (`~/.config/ai-power-guild/memory.json`), and verifies a connection. Stdout is `{ok, dataPlaneUrl, bankId}` — never a token. Capture itself runs through the plugin's hooks (below); re-running just re-verifies. |
-| `node scripts/memory.mjs <search\|list\|export\|forget>` | Manage the member's memory. `search <query>` → semantic matches (each with a `document_id`); `list [--limit N]` → stored memories; `export` → the whole corpus as JSON; `forget <documentId>` → delete one memory by its source document. Requires `memory-setup`. To forget something, `search` for it first, then `forget` the matching `document_id`. |
 
 ### Contract notes
 
@@ -218,52 +216,18 @@ separate auth** — it loads a locally cloned skill repo like any other.
 - **Linux without a secret service** falls back to git's plaintext `store`
   (`~/.git-credentials`) and the command WARNS about it — protect that machine.
 
-## Portable memory
+## Portable memory → the `guild-memory` skill
 
-`memory-setup.mjs` connects the member's **portable memory** — a personal memory
-that follows them across Claude Code sessions (and, later, other assistants),
-backed by the Guild's self-hosted Hindsight server. It is the memory counterpart
-to the git skills repo: skills are curated and version-controlled; memory
-accumulates automatically.
+Portable memory (the member's personal memory, backed by the Guild's self-hosted
+Hindsight server) lives in its own sibling skill, **`guild-memory`** — it is not
+part of guild-connect and is **not** auto-loaded. Memory is opt-in and
+per-project: it captures nothing until the member activates it for a chosen
+project, and onboarding never turns it on.
 
-- **One command:** `node scripts/memory-setup.mjs`. It calls
-  `/api/account/memory-access` with the stored Guild credential, records the
-  returned data-plane URL + bank id in `~/.config/ai-power-guild/memory.json`
-  (no secret), and verifies a connection. Stdout is `{ok, dataPlaneUrl, bankId}`.
-- **Capture runs through the plugin's hooks**, not a daemon or a stored token.
-  Installing the `ai-power-guild` plugin registers two Claude Code hooks
-  (`UserPromptSubmit` → recall + inject relevant memory; `Stop` → retain the
-  latest exchange). Each hook mints a **fresh** access token from the durable
-  Guild credential per run — so there is no static token to rotate or leak.
-- **Fail-open by design.** If memory isn't set up, the network is down, or a call
-  is slow, the hooks exit silently and never block or break the session.
-- **Per-member isolation.** The member's token scopes every call to their own
-  memory; no other member can read or write it. Account deletion deletes their
-  memory (right-to-delete); "Disconnect connected devices" ends the sessions that
-  authorize capture.
-- **Per environment:** run `memory-setup` on each machine (it records that
-  machine's endpoint; the durable Guild credential supplies the rotating token).
-- Codex / other harnesses are not auto-configured yet — they expect a static
-  token, which the short-lived-token model doesn't fit; that integration is
-  separate (future work).
-
-**Managing memory (`memory.mjs`).** This is the member's primary, agent-native
-surface for their memory — richer than the web `/memory` page (which only offers
-export + delete-all). When the member asks to recall, review, or forget things:
-
-- **Search / recall:** `node scripts/memory.mjs search "<what they asked about>"`
-  → matches, each with a `document_id`. (Capture/recall also happens automatically
-  via the hooks; this is the explicit query path.)
-- **List:** `node scripts/memory.mjs list [--limit N]` → stored memories.
-- **Forget:** to honor "forget X / delete that," FIRST `search` for it, then
-  `forget <document_id>` from a match. Confirm the right entry with the member
-  before deleting. Entries with no `document_id` (derived observations) can't be
-  forgotten individually — point the member at the web page's "Delete all" for a
-  full reset.
-- **Export:** `node scripts/memory.mjs export` → the whole corpus as JSON the
-  member can save. Never paste a member's memory contents anywhere they didn't ask.
-- **Never print the git token** — `git-setup` pipes it straight into
-  `git credential approve`; quote only the command's own JSON output.
+When the member asks to set up, activate, search, or forget memory, use the
+`guild-memory` skill (`memory-setup`, `memory-activate`, `memory`). It reuses
+this skill's `credentials.mjs` / `api.mjs` plumbing, so the two install together
+as user-scope siblings.
 
 ## Credential file (shared contract for all guild skills)
 
