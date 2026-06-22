@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// guild-connect: memory-setup.mjs (memory U10).
+// guild-memory: memory-setup.mjs (memory U10).
 //
 // One-time: connects this member's portable memory. It provisions the member's
 // memory bank server-side and records WHERE it lives locally, so the plugin's
@@ -18,8 +18,8 @@
 // client to install here — just the endpoint record + a connectivity check.
 
 import { pathToFileURL } from "node:url";
-import { actingAs, postJson, runCommand } from "./api.mjs";
-import { getValidAccessToken } from "./credentials.mjs";
+import { actingAs, postJson, runCommand } from "../../guild-connect/scripts/api.mjs";
+import { getValidAccessToken } from "../../guild-connect/scripts/credentials.mjs";
 import { writeMemoryConfig } from "./memory-config.mjs";
 import { recall } from "./memory-mcp.mjs";
 

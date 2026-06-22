@@ -85,6 +85,46 @@ function Remove-JsonKey {
     Write-Step "$Label" "ok"
 }
 
+# Selectively strip only the guild memory capture hooks (any group whose command
+# references memory-hook.mjs) from a project's .claude/settings.json, preserving
+# any co-located non-memory hooks. The inverse of memory-activate.mjs's merge.
+function Remove-MemoryHooks {
+    param([string]$File, [string]$Label)
+    if (-not (Test-Path $File)) {
+        Write-Step "$Label (file not present)" "skip"
+        return
+    }
+    $json = Get-Content $File -Raw | ConvertFrom-Json
+    if (-not $json.hooks) {
+        Write-Step "$Label (no hooks)" "skip"
+        return
+    }
+    $changed = $false
+    foreach ($event in @($json.hooks.PSObject.Properties.Name)) {
+        $groups = @($json.hooks.$event)
+        $kept = @($groups | Where-Object {
+            $cmds = @($_.hooks | ForEach-Object { $_.command })
+            -not (@($cmds) -match 'memory-hook\.mjs')
+        })
+        if ($kept.Count -ne $groups.Count) { $changed = $true }
+        if ($kept.Count -eq 0) {
+            $json.hooks.PSObject.Properties.Remove($event)
+        } else {
+            $json.hooks.$event = $kept
+        }
+    }
+    if (-not $changed) {
+        Write-Step "$Label (no memory hooks)" "skip"
+        return
+    }
+    if ($DryRun) {
+        Write-Step "$Label" "dry"
+        return
+    }
+    $json | ConvertTo-Json -Depth 10 | Set-Content $File -Encoding UTF8
+    Write-Step "$Label" "ok"
+}
+
 Write-Host ""
 Write-Host "=== AI Power Guild Plugin Test Reset ===" -ForegroundColor Cyan
 Write-Host "    Project dir: $Project"
@@ -132,6 +172,21 @@ if (-not $cliHandled) {
 Remove-JsonKey "$ClaudeDir\plugins\known_marketplaces.json" `
     "guild-skills" `
     "known_marketplaces.json -> guild-skills"
+
+# -------------------------------------------------------------------------
+# 2b. User-scope guild skills (~/.claude/skills) — installed by install-skills.mjs
+# -------------------------------------------------------------------------
+Write-Host ""
+Write-Host "--- Step 2b: User-scope guild skills ---"
+
+$UserSkillsDir = if ($env:AI_POWER_GUILD_SKILLS_DIR) {
+    $env:AI_POWER_GUILD_SKILLS_DIR
+} else {
+    "$env:USERPROFILE\.claude\skills"
+}
+foreach ($s in @("guild-connect", "claudecof-setup", "guild-memory")) {
+    Remove-DirSafe (Join-Path $UserSkillsDir $s) "user-scope skill: $s"
+}
 
 # -------------------------------------------------------------------------
 # 3. Guild credentials & config
@@ -208,6 +263,11 @@ if (Test-Path $Project) {
         }
     }
 }
+
+# Strip the guild memory capture hooks from the project's settings BEFORE the
+# directory is deleted (no-op if the whole project goes, but matters when a
+# member points -Project at a real project they want to keep).
+Remove-MemoryHooks (Join-Path $Project ".claude\settings.json") "project memory hooks"
 
 Remove-DirSafe $Project "test project ($Project)"
 

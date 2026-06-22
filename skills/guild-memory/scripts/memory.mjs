@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// guild-connect: memory.mjs (memory U9). The AI-client surface for managing the
+// guild-memory: memory.mjs (memory U9). The AI-client surface for managing the
 // member's portable memory — the agent-native counterpart to the (deliberately
 // light) web /memory page. Subcommands:
 //
@@ -17,8 +17,8 @@
 // own memory. Requires `memory-setup` to have run (writes the local endpoint).
 
 import { pathToFileURL } from "node:url";
-import { actingAs, runCommand } from "./api.mjs";
-import { getValidAccessToken } from "./credentials.mjs";
+import { actingAs, runCommand } from "../../guild-connect/scripts/api.mjs";
+import { getValidAccessToken } from "../../guild-connect/scripts/credentials.mjs";
 import { readMemoryConfig } from "./memory-config.mjs";
 import { deleteDocument, listAllMemories, listMemories, searchMemories } from "./memory-mcp.mjs";
 

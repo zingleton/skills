@@ -1,4 +1,4 @@
-// guild-connect: memory-config.mjs (memory U10).
+// guild-memory: memory-config.mjs (memory U10).
 //
 // Local record of WHERE this member's memory lives — the data-plane base URL and
 // their bank id — written once by memory-setup and read by the capture hooks
@@ -8,7 +8,7 @@
 
 import { dirname, join } from "node:path";
 import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
-import { credentialsPath } from "./credentials.mjs";
+import { credentialsPath } from "../../guild-connect/scripts/credentials.mjs";
 
 export function memoryConfigPath() {
   return join(dirname(credentialsPath()), "memory.json");

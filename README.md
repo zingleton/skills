@@ -8,8 +8,25 @@ app and help members get set up. The plugin bundles:
 - **`claudecof-setup`** — scaffold a personalized "Personal Chief of Staff"
   project (a customized `CLAUDE.md` + memory system), pre-filled from your guild
   profile when it's connected.
+- **`guild-memory`** — opt-in portable memory (backed by the Guild's Hindsight
+  server). Off until you activate it for a chosen project; onboarding never turns
+  it on.
 
-## Install
+## Paste-to-onboard (recommended)
+
+The simplest way in: **paste one instruction** into a fresh Claude Code session
+and it onboards you end-to-end, then installs the guild skills at **user scope**
+(`~/.claude/skills/`) so they load in every future session — no marketplace, no
+`claude plugin install`.
+
+➡️ **[docs/onboarding-prompt.md](docs/onboarding-prompt.md)** — copy the block
+there and paste it as your first message.
+
+Requires [Claude Code](https://code.claude.com), **Node 18+, and git** on your
+PATH. Re-running the installer (`install-skills.mjs`) is the update path. The
+marketplace plugin below is an **optional** follow-up, not a prerequisite.
+
+## Install (optional marketplace plugin)
 
 > **Install the plugin from your terminal — not from inside a Claude Code
 > session, and don't ask Claude to install it for you.** Plugin installation is
@@ -76,13 +93,26 @@ Once installed, just ask Claude in natural language:
 - **Browse the catalog:** *"Show me the guild roles and tasks I can pick from."*
 - **Set up a Chief of Staff:** *"Set up a Personal Chief of Staff for me in
   Claude Code, and pre-fill it from my AI Power Guild account."*
+- **Turn on memory (opt-in):** *"Activate guild memory for this project."* Memory
+  is the separate `guild-memory` skill — per-project and off until you ask.
 
 ## Updating
 
-After new versions are published, refresh the catalog **then** the plugin — at
-the terminal. The first command updates the marketplace listing; the second
-installs the new version, so running only the second won't pick up a release.
-Then `/reload-plugins` in any open session (or restart `claude`):
+**Paste-to-onboard install:** re-run the installer to refresh the user-scope
+skills — no marketplace needed:
+
+```bash
+node skills/guild-connect/scripts/install-skills.mjs
+```
+
+(Run it from a `zingleton/skills` checkout, or just re-paste the onboarding
+instruction.)
+
+**Marketplace plugin (optional):** if you installed the plugin instead, refresh
+the catalog **then** the plugin — at the terminal. The first command updates the
+marketplace listing; the second installs the new version, so running only the
+second won't pick up a release. Then `/reload-plugins` in any open session (or
+restart `claude`):
 
 ```bash
 claude plugin marketplace update guild-skills

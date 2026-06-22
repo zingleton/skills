@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// guild-connect: memory-hook.mjs (memory U10).
+// guild-memory: memory-hook.mjs (memory U10).
 //
 // Claude Code hook handler that wires the member's memory into every session,
 // shipped IN the ai-power-guild plugin (plugin.json registers it), so installing
@@ -18,7 +18,7 @@
 
 import { readFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
-import { getValidAccessToken } from "./credentials.mjs";
+import { getValidAccessToken } from "../../guild-connect/scripts/credentials.mjs";
 import { readMemoryConfig } from "./memory-config.mjs";
 import { recall, retain } from "./memory-mcp.mjs";
 
