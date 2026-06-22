@@ -43,7 +43,7 @@ skills/
     scripts/scaffold.mjs     Deterministic project writer (templates → project)
     assets/                  CLAUDE.md template, memory templates, getting-started guide
 CLAUDE.md                    This file
-package.json                 npm test → guild-connect unit tests
+package.json                 npm test → unit tests for both skills
 .gitignore
 ```
 
@@ -56,9 +56,10 @@ gracefully when the guild isn't connected.
 - **Skills are the product.** Each skill is a directory under `skills/` with a
   `SKILL.md` and its supporting scripts.
 - **Verify with `npm test`** (Node's built-in runner, zero dependencies). It
-  runs the `guild-connect` unit tests — credential store/lock/refresh, the
-  API 401/redaction discipline, and the pure helpers. Run it after touching any
-  script under `skills/`.
+  runs the unit tests for both skills (glob `skills/**/tests/**/*.test.mjs`) —
+  `guild-connect`'s credential store/lock/refresh, API 401/redaction, the
+  `doctor`/`repo-setup` pure helpers and orchestrators, and `claudecof-setup`'s
+  scaffold + skills-linking. Run it after touching any script under `skills/`.
 - **`guild-connect` is canonical and shared.** It owns the credential file contract
   (`$AI_POWER_GUILD_CREDENTIALS_PATH` → `~/.config/ai-power-guild/credentials.json`,
   file `0600`). Future skills import its `credentials.mjs` / `api.mjs` instead of

@@ -193,6 +193,22 @@ if ($DryRun) {
 Write-Host ""
 Write-Host "--- Step 5: Test project & scaffolded project ---"
 
+# Delete any reparse points (the scaffold links .claude/skills -> repo/skills as
+# an NTFS junction) FIRST, so the recursive delete below never follows the link
+# into repo/skills and clobbers the wrong tree.
+if (Test-Path $Project) {
+    $reparse = Get-ChildItem -Path $Project -Recurse -Force -Directory -ErrorAction SilentlyContinue |
+        Where-Object { $_.Attributes -band [IO.FileAttributes]::ReparsePoint }
+    foreach ($link in $reparse) {
+        if ($DryRun) {
+            Write-Step "junction/symlink $($link.FullName)" "dry"
+        } else {
+            try { $link.Delete() } catch { cmd /c rmdir "$($link.FullName)" 2>$null }
+            Write-Step "Removed link $($link.FullName)" "ok"
+        }
+    }
+}
+
 Remove-DirSafe $Project "test project ($Project)"
 
 # -------------------------------------------------------------------------
