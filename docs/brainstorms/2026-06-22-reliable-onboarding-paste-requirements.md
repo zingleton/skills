@@ -5,6 +5,13 @@ topic: reliable-onboarding-paste
 
 # Reliable Onboarding via a Single Paste-able Instruction
 
+> **Superseded during planning (2026-06-22).** Two distribution decisions below
+> were simplified in planning: the **project-scope skills-directory plugin** became
+> a **user-scope skill install**, and the **dormant-distributed memory hooks**
+> became a separate **`guild-memory` skill** activated per project on demand. The
+> onboarding goal and the "onboarded-is-enough" framing are unchanged. See
+> `docs/plans/2026-06-22-002-feat-user-scope-onboarding-memory-skill-plan.md`.
+
 ## Summary
 
 Give users one paste-able instruction (Claude Code first) that takes them from
