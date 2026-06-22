@@ -26,6 +26,7 @@ interactive on stdout).
 
 | Command | What it does |
 | --- | --- |
+| `node scripts/doctor.mjs` | Preflight (run FIRST, before connect): checks Node ≥ 18 and git are present and prints copy-pasteable fixes; exits non-zero if not. No credential, no network. Stdout `{ok, checks}`. Does NOT check plugin freshness (that's not knowable pre-connect — see the choreography note on `stale_skill`). |
 | `node scripts/connect.mjs` | Interactive (human at a terminal): email → emailed 6-digit code → credential saved + verified. Re-running verifies an existing connection instead of re-prompting. **Do not use this form from an agent harness** — it blocks on stdin for a code that only arrives after the email step. Use the trio below instead. |
 | `node scripts/connect.mjs status` | Non-interactive connection check. `{ok: true, status: "connected", email}` when live; `{ok: false, status: "not_connected", signup_url}` when no credential; `{ok: false, status: "reconnect_required"}` when the stored session is dead (the file is cleared). JSON on stdout, `Acting as`/copy on stderr. This is the agent's connect-check — it never prompts. |
 | `node scripts/connect.mjs send <email>` | Non-interactive: request a SIGN-IN-ONLY code (never creates accounts). `status`: `sent` \| `unknown_email` (carries `signup_url`) \| `code_already_pending` \| `stale_skill` \| `invalid_email` \| `error`. |
@@ -39,6 +40,7 @@ interactive on stdout).
 | `node scripts/avatar.mjs upload <file>` | Uploads photo bytes (JPEG/PNG/WebP, ≤2MB) after local validation. |
 | `node scripts/avatar.mjs remove` | Removes the current photo (web-parity read-merge-write save with `picture: {state: "removed"}`; the other profile fields are carried through unchanged). |
 | `node scripts/git-setup.mjs` | One-time: provisions the member's Forgejo git access and installs a durable, per-device git credential into the OS store so plain `git clone/pull/push` works with no prompt. Stdout is `{ok, forgejoHost, username, helper, plaintextWarning}` — never the token. Re-running replaces this device's token. |
+| `node scripts/repo-setup.mjs '<json>'` | Clones the member's `personal` repo into `<targetDir>/repo` and seeds the COF's durable layer (memory/skills/Tools) — seed-only-if-absent, commit+push only when it seeded, **never pulls** an existing clone (the COF owns its own sync). Takes `{targetDir, forgejoHost, username}`; host+username come from `git-setup`'s stdout — it **never re-mints** the git token. Stdout `{ok, repoDir, cloned, seeded, pushed}`. Safe to re-run. |
 | `node scripts/memory-setup.mjs` | One-time: connects the member's portable memory. Provisions their memory bank, records the endpoint locally (`~/.config/ai-power-guild/memory.json`), and verifies a connection. Stdout is `{ok, dataPlaneUrl, bankId}` — never a token. Capture itself runs through the plugin's hooks (below); re-running just re-verifies. |
 | `node scripts/memory.mjs <search\|list\|export\|forget>` | Manage the member's memory. `search <query>` → semantic matches (each with a `document_id`); `list [--limit N]` → stored memories; `export` → the whole corpus as JSON; `forget <documentId>` → delete one memory by its source document. Requires `memory-setup`. To forget something, `search` for it first, then `forget` the matching `document_id`. |
 
@@ -74,7 +76,7 @@ interactive on stdout).
 
 ## Choreography
 
-Follow this order every session:
+Run `doctor.mjs` FIRST as a preflight — if it fails, surface its fixes and stop; the rest of the flow needs Node + git. (A missing or too-old Node can't even start `doctor.mjs`, so a shell-level `node --version` check precedes it.) Then follow this order every session. The whole flow is **re-runnable**: each step is idempotent and each script derives its own done-state, so a re-run skips completed steps (`connect.mjs status` for the connection, `git ls-remote` for git access, a `repo/.git` check for the clone, `CLAUDE.md` existence for the scaffold) — the scripts, not this prose, are what make re-running safe.
 
 1. **Connect check.** Run `connect.mjs status`. On `status: "connected"`,
    continue. On `not_connected` or `reconnect_required`, link the account with
@@ -134,15 +136,20 @@ Follow this order every session:
    image to a local file, describe what it shows, get explicit approval, then
    `avatar.mjs upload <file>`. Never upload an unapproved or undescribed
    image.
-7. **Recommend the Personal Chief of Staff setup (Claude Code only).** Once the
+7. **Git access, then the Personal Chief of Staff (Claude Code only).** Once the
    member has a saved profile (`profile.mjs get` returns a non-null `profile`)
    **and** you are running inside Claude Code with the sibling `claudecof-setup`
-   skill available in this plugin, recommend it as the natural next step: it
-   scaffolds a personalized "Personal Chief of Staff" project (a tailored
-   `CLAUDE.md` plus a memory system) and reuses the profile and interests you
-   just gathered, so it starts personalized instead of blank. Offer it once,
-   plainly (e.g. "Want me to set up a Personal Chief of Staff seeded from your
-   guild profile?"), and if the member says yes, invoke `claudecof-setup`.
+   skill available in this plugin:
+   - Run `git-setup.mjs` to install the durable git credential (see "Git access"
+     below), and **capture its stdout `{forgejoHost, username}`** — these get
+     threaded onward so nothing has to re-mint the git token.
+   - Offer the Chief of Staff setup plainly (e.g. "Want me to set up a Personal
+     Chief of Staff seeded from your guild profile?"). If the member says yes,
+     invoke `claudecof-setup`, **passing along `forgejoHost` and `username`** from
+     git-setup. That skill picks the project location, clones the member's
+     `personal` repo into `<project>/repo` via `repo-setup.mjs` (using those
+     values — never re-fetching them), and scaffolds a personalized `CLAUDE.md`
+     that reuses the profile and interests you just gathered.
    - **Skip it** when there is no saved profile yet, when `claudecof-setup`
      isn't available, or when you are not in Claude Code — that skill scaffolds
      a Claude Code project and only makes sense there. Don't push if the member

@@ -206,6 +206,16 @@ fi
 echo ""
 echo "--- Step 5: Test project & scaffolded project ---"
 
+# Remove any symlinks (the scaffold links .claude/skills -> repo/skills) before
+# the recursive delete so rm never traverses a link out of the project tree.
+if [[ -d "$PROJECT_DIR" ]]; then
+  if $DRY_RUN; then
+    echo -e "  $SKIP [dry-run] remove symlinks under $PROJECT_DIR (e.g. .claude/skills)"
+  else
+    find "$PROJECT_DIR" -type l -exec rm -f {} + 2>/dev/null || true
+  fi
+fi
+
 remove_dir "$PROJECT_DIR" "test project ($PROJECT_DIR)"
 
 # -------------------------------------------------------------------------

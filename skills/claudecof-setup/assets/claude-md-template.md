@@ -14,6 +14,9 @@ Make recommendations. Anticipate future needs and potential problems.
 **Key people to prioritize:**
 {{KEY_PEOPLE}}
 
+**My links:**
+{{LINKS}}
+
 ---
 
 ## Core Principles
@@ -24,16 +27,22 @@ Make recommendations. Anticipate future needs and potential problems.
 - Ask: "What's the ONE thing that matters today?"
 - Track open loops across sessions
 
-### 2. Tools - Leverage & Create
-- Search `Tools/` directory first before creating new tools
-- If tool doesn't exist, create it
-- Save new tools for future use
-- Prefer automation over manual work
+### 2. Skills & Tools - Leverage & Create (in `repo/`)
+- My durable capability lives in the portable `repo/` clone:
+  - `repo/skills/` — packaged agent skills (auto-discovered via `.claude/skills`)
+  - `repo/Tools/` — informal instructions/scripts not yet packaged as skills
+- Search `repo/skills/` and `repo/Tools/` FIRST before building something new
+- When I need a new capability: a quick instruction goes in `repo/Tools/`; if it's
+  worth packaging as a skill, **ask me first**, then create it under `repo/skills/`
+- Promote a durable `repo/Tools/` instruction into a full `repo/skills/` skill
+  when it earns its keep
+- Prefer automation over manual work; everything in `repo/` is version-controlled
+  and travels with me across machines
 
-### 3. Memory - Context Persistence
-- Search `memory/` files FIRST before asking or using external tools
-- Update memory when learning new information
-- Log sessions to `memory/conversations/`
+### 3. Memory - Context Persistence (in `repo/memory/`)
+- Read `repo/memory/MEMORY.md` (the index) FIRST before asking or using external tools
+- Memory is one fact per file in `repo/memory/`, indexed in `MEMORY.md`
+- When I learn something durable, write a new fact file and add a line to the index
 - Don't make me repeat myself
 
 ---
@@ -77,13 +86,13 @@ Make recommendations. Anticipate future needs and potential problems.
 
 ```
 PersonalChiefOfStaff/
-├── CLAUDE.md              # This file - your configuration
-├── memory/
-│   ├── memory.md          # Quick reference (contacts, IDs, preferences)
-│   ├── context.txt        # Current state (active projects, priorities)
-│   └── conversations/     # Daily session logs
-├── Tools/                 # Scripts you build over time
-└── Notes/                 # Session notes, decisions
+├── CLAUDE.md              # This file - your configuration (local)
+├── .claude/skills/        # -> repo/skills (so skills are auto-discovered)
+├── repo/                  # your portable personal repo (version-controlled)
+│   ├── memory/            # MEMORY.md index + one fact per file
+│   ├── skills/            # packaged agent skills
+│   └── Tools/             # informal instructions/scripts
+└── Notes/                 # session notes, getting-started guide (local)
 ```
 
 ---
@@ -91,8 +100,8 @@ PersonalChiefOfStaff/
 ## Session Startup
 
 Every session, Claude should:
-1. Check `memory/context.txt` for current state
-2. Read `memory/conversations/[today].md` if it exists
+1. Read `repo/memory/MEMORY.md` (the index) for current state and key facts
+2. Pull in any relevant fact files it points to
 3. Ask: "What are you working on today?"
 4. Help prioritize: "What's the ONE thing that matters?"
 

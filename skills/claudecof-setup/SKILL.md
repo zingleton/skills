@@ -2,9 +2,9 @@
 name: claudecof-setup
 description: >
   Set up a "Personal Chief of Staff" - an executive-assistant AI that runs in
-  Claude Code - by scaffolding a project with a customized CLAUDE.md, a memory
-  store, Tools/ and Notes/ folders, and a getting-started guide. When the
-  member's AI Power Guild account is connected, pre-fills their name, role,
+  Claude Code - by scaffolding a project with a customized CLAUDE.md, a portable
+  personal repo holding its memory and skills, and a getting-started guide. When
+  the member's AI Power Guild account is connected, pre-fills their name, role,
   links, and interests so the config starts personalized instead of blank. Use
   this whenever someone wants to create, configure, bootstrap, or "set up" a
   personal chief of staff, a "COF", an executive assistant, a daily-driver
@@ -18,8 +18,9 @@ description: >
 
 Builds a ready-to-run **Personal Chief of Staff** project: an executive-admin
 assistant the member opens with `claude` in its own folder. The config is based
-on graiz's Chief of Staff template, customized to the member, and seeded with a
-memory store so the assistant remembers context across sessions.
+on graiz's Chief of Staff template, customized to the member, and wired to a
+portable personal repo that holds its memory and skills — so context and
+capability follow the member across machines and AI installations.
 
 The win is a config that starts **personalized**: when the member's AI Power
 Guild account is connected, their name, role, links, and interests flow
@@ -30,30 +31,62 @@ template.
 
 ```
 <project>/
-├── CLAUDE.md                       # the assistant's config (customized)
-├── memory/
-│   ├── memory.md                   # quick reference (people, IDs, prefs)
-│   ├── context.txt                 # current state (projects, focus)
-│   └── conversations/              # daily session logs (starts empty)
-├── Tools/                          # scripts the assistant builds over time
+├── CLAUDE.md                       # the assistant's config (customized, local)
+├── .claude/skills                  # junction/symlink -> repo/skills
+├── repo/                           # clone of your `personal` repo (portable)
+│   ├── memory/                     # MEMORY.md index + one fact per file
+│   ├── skills/                     # packaged agent skills
+│   └── Tools/                      # informal instructions/scripts
 └── Notes/
     └── chief-of-staff-guide.md     # how to run, extend, and troubleshoot it
 ```
 
-The long template and the project writing are handled by `scripts/scaffold.mjs`
-so every run is byte-identical — your job is the conversational part: gathering
-and **confirming** the customization values, then calling the script once.
+Two scripts split the work. `guild-connect`'s `repo-setup.mjs` clones the
+member's `personal` repo into `<project>/repo` and seeds the durable layer
+(memory/skills/Tools). This skill's `scripts/scaffold.mjs` writes only the local
+wrapper — the customized `CLAUDE.md`, `Notes/`, and the `.claude/skills` link to
+`repo/skills`. Your job is the conversational part: gathering and **confirming**
+the customization values, then calling the scripts.
 
 ## Workflow
 
-### 1. Pick the project location
+### 1. Preflight and pick the project location
 
-Ask where to create it. Default to `PersonalChiefOfStaff` in the current
-directory if the member has no preference. If a `CLAUDE.md` already exists
-there, stop and confirm before overwriting (the scaffold refuses without
-`force: true` — surface that, don't blindly force).
+First, an environment preflight: `node ../guild-connect/scripts/doctor.mjs` —
+it checks Node ≥ 18 and git and prints fixes if either is missing. If
+`guild-connect` handed you `forgejoHost` and `username` (from `git-setup`), keep
+them for step 2.
 
-### 2. Pull AI Power Guild data (when available)
+Ask where to create the project. Default to `PersonalChiefOfStaff` in the current
+directory if the member has no preference. If a `CLAUDE.md` already exists there,
+stop and confirm before overwriting (the scaffold refuses without `force: true` —
+surface that, don't blindly force).
+
+### 2. Clone the personal repo (when git access is set up)
+
+The portable `repo/` (memory + skills + Tools) comes from `guild-connect`'s
+`repo-setup.mjs`, not this skill's scaffold. When `git-setup` has run and you
+have the member's `forgejoHost` + `username`:
+
+```
+node ../guild-connect/scripts/repo-setup.mjs '{
+  "targetDir": "<project>",
+  "forgejoHost": "<forgejoHost from git-setup>",
+  "username": "<username from git-setup>"
+}'
+```
+
+It clones `personal` into `<project>/repo` and seeds `memory/`, `skills/`,
+`Tools/` (seed-only-if-absent; it never clobbers an already-populated repo and
+never re-mints the git token). Run it BEFORE scaffold so `repo/skills` exists for
+the `.claude/skills` link.
+
+**Degrade gracefully.** If git isn't set up, `repo-setup` isn't available, or the
+clone fails, skip this step and still scaffold — the COF is usable without the
+portable repo (it just won't have portable memory/skills until the member runs
+git-setup + repo-setup later). Never block setup on it.
+
+### 3. Pull AI Power Guild data (when available)
 
 The `guild-connect` skill is a sibling in this same plugin; its scripts live at
 `../guild-connect/scripts/` relative to THIS skill's directory. They need
@@ -83,7 +116,7 @@ When it is present:
      turn ids into human labels: `roles[{key,label}]`,
      `deliverable_types[{id,label}]`, `tasks[{id,label}]`.
 
-### 3. Map guild data → config (then confirm with the member)
+### 4. Map guild data → config (then confirm with the member)
 
 Resolve labels from the catalog, then draft the `CLAUDE.md` fields:
 
@@ -107,7 +140,7 @@ file they'll live with. Treat guild data as a *draft to approve*, mirroring how
 gaps (key people, calendar) by asking; leave a field to its template default
 rather than inventing personal facts.
 
-### 4. Scaffold the project
+### 5. Scaffold the project
 
 Call the script once with the confirmed values:
 
@@ -125,11 +158,14 @@ node scripts/scaffold.mjs '{
 
 Everything except `targetDir` is optional — omitted fields keep the template's
 own guidance text, so the file is still usable. Pass `"force": true` only after
-the member confirms overwriting an existing `CLAUDE.md`. The script seeds memory
-files only when absent, so a forced refresh of `CLAUDE.md` never wipes
-accumulated memory.
+the member confirms overwriting an existing `CLAUDE.md`. scaffold writes only the
+local wrapper (`CLAUDE.md`, `Notes/`, and the `.claude/skills` link to
+`repo/skills`); the durable memory/skills/Tools come from `repo-setup` (step 2),
+so a forced `CLAUDE.md` refresh never touches accumulated memory. If `repo/skills`
+doesn't exist yet (step 2 skipped), the link is simply not created — re-run
+scaffold after `repo-setup` to add it.
 
-### 5. Hand off
+### 6. Hand off
 
 Report what was created and tell the member how to start their assistant:
 

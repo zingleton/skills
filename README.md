@@ -11,7 +11,10 @@ app and help members get set up. The plugin bundles:
 
 ## Install
 
-Requires [Claude Code](https://code.claude.com) v2.1+ and Node 18+.
+Requires [Claude Code](https://code.claude.com) v2.1+, **Node 18+, and git** on
+your PATH. The connect flow runs a quick preflight (`doctor`) that checks both
+and tells you what to install if either is missing — but a missing or too-old
+Node can't even start that check, so install Node first if you don't have it.
 
 ```bash
 claude plugin marketplace add zingleton/skills
@@ -47,12 +50,17 @@ Once installed, just ask Claude in natural language:
 
 ## Updating
 
-After new versions are published:
+After new versions are published, refresh the catalog **then** the plugin. The
+first command updates the marketplace listing; the second installs the new
+version into your environment — running only the second won't pick up a release:
 
 ```bash
 claude plugin marketplace update guild-skills
 claude plugin update ai-power-guild@guild-skills
 ```
+
+If a connect step ever reports an outdated skill (`stale_skill`), the plugin is
+behind the server — run the two commands above to update it.
 
 ## Development
 
