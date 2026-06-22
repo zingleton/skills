@@ -101,6 +101,54 @@ with open('$file', 'w') as f:
 " && echo -e "  $OK $label" || echo -e "  $WARN $label (failed to edit)"
 }
 
+# Selectively strip only the guild memory capture hooks (any group whose command
+# references memory-hook.mjs) from a project's .claude/settings.json, preserving
+# co-located non-memory hooks. The inverse of memory-activate.mjs's merge.
+remove_memory_hooks() {
+  local file="$1"
+  local label="$2"
+  if [[ ! -f "$file" ]]; then
+    echo -e "  $SKIP $label (file not present)"
+    return 0
+  fi
+  # Does it carry any memory hook? (exit 0 = yes)
+  if ! python3 -c "
+import json
+d = json.load(open('$file'))
+hooks = d.get('hooks', {})
+found = any(
+    'memory-hook.mjs' in h.get('command', '')
+    for groups in hooks.values() for g in groups for h in g.get('hooks', [])
+)
+raise SystemExit(0 if found else 1)
+" 2>/dev/null; then
+    echo -e "  $SKIP $label (no memory hooks)"
+    return 0
+  fi
+  if $DRY_RUN; then
+    echo -e "  $SKIP [dry-run] $label"
+    return 0
+  fi
+  python3 -c "
+import json
+with open('$file') as f:
+    data = json.load(f)
+hooks = data.get('hooks', {})
+for event in list(hooks):
+    kept = [
+        g for g in hooks[event]
+        if not any('memory-hook.mjs' in h.get('command', '') for h in g.get('hooks', []))
+    ]
+    if kept:
+        hooks[event] = kept
+    else:
+        del hooks[event]
+with open('$file', 'w') as f:
+    json.dump(data, f, indent=2)
+    f.write('\n')
+" && echo -e "  $OK $label" || echo -e "  $WARN $label (failed to edit)"
+}
+
 echo ""
 echo "=== AI Power Guild Plugin Test Reset ==="
 echo "    Project dir: $PROJECT_DIR"
@@ -147,6 +195,17 @@ fi
 remove_json_key "$CLAUDE_DIR/plugins/known_marketplaces.json" \
   "guild-skills" \
   "known_marketplaces.json → guild-skills"
+
+# -------------------------------------------------------------------------
+# 2b. User-scope guild skills (~/.claude/skills) — installed by install-skills.mjs
+# -------------------------------------------------------------------------
+echo ""
+echo "--- Step 2b: User-scope guild skills ---"
+
+USER_SKILLS_DIR="${AI_POWER_GUILD_SKILLS_DIR:-$HOME/.claude/skills}"
+for s in guild-connect claudecof-setup guild-memory; do
+  remove_dir "$USER_SKILLS_DIR/$s" "user-scope skill: $s"
+done
 
 # -------------------------------------------------------------------------
 # 3. Guild credentials & config
@@ -215,6 +274,10 @@ if [[ -d "$PROJECT_DIR" ]]; then
     find "$PROJECT_DIR" -type l -exec rm -f {} + 2>/dev/null || true
   fi
 fi
+
+# Strip the guild memory capture hooks from the project's settings BEFORE the
+# directory is deleted — matters when --project points at a real project to keep.
+remove_memory_hooks "$PROJECT_DIR/.claude/settings.json" "project memory hooks"
 
 remove_dir "$PROJECT_DIR" "test project ($PROJECT_DIR)"
 

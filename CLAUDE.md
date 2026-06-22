@@ -37,19 +37,36 @@ skills/
   guild-connect/             Connect + onboarding skill (intake + profile + avatar)
     SKILL.md                 Skill instructions and contract
     scripts/*.mjs            Zero-dependency Node 18+ scripts (machine-readable JSON on stdout)
+      install-skills.mjs     Copies the guild skills → ~/.claude/skills/ (user-scope install + update path)
     tests/*.test.mjs         Unit tests (node --test) — run via `npm test`
   claudecof-setup/           Scaffolds a "Personal Chief of Staff" Claude Code project
     SKILL.md                 Setup workflow + guild-connect integration
     scripts/scaffold.mjs     Deterministic project writer (templates → project)
     assets/                  CLAUDE.md template, memory templates, getting-started guide
+  guild-memory/              Opt-in portable memory (Hindsight) — off until activated per project
+    SKILL.md                 Setup / activate / manage memory
+    scripts/*.mjs            Memory scripts (import guild-connect's credentials.mjs/api.mjs as siblings)
+      memory-activate.mjs    Writes the capture hooks into a target project's .claude/settings.json
+    tests/*.test.mjs         Unit tests
+docs/onboarding-prompt.md    The single paste-able onboarding instruction (user-scope install)
 CLAUDE.md                    This file
-package.json                 npm test → unit tests for both skills
+package.json                 npm test → unit tests for all skills
 .gitignore
 ```
 
 Skills may reuse each other: `claudecof-setup` calls `guild-connect`'s scripts
 (`../guild-connect/scripts/`) to pre-fill a member's details, degrading
-gracefully when the guild isn't connected.
+gracefully when the guild isn't connected. `guild-memory` imports
+`guild-connect`'s `credentials.mjs` / `api.mjs` via `../../guild-connect/scripts/`,
+so the user-scope installer always installs all three skills together.
+
+**Onboarding installs skills at user scope.** The paste-able instruction
+(`docs/onboarding-prompt.md`) runs onboarding, then `install-skills.mjs` copies
+`guild-connect`, `claudecof-setup`, and `guild-memory` into `~/.claude/skills/`
+— no marketplace, no `claude plugin install`. Re-running the installer is the
+update path. The marketplace plugin is an optional follow-up. **Memory is
+opt-in:** the plugin no longer auto-loads memory hooks (v0.4.0); a member turns
+memory on for one project via `guild-memory`'s `memory-activate.mjs`.
 
 ## Working in this repo
 
