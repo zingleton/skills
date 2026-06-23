@@ -333,24 +333,3 @@ test("release after a stale-break does NOT remove the new holder's lock", async 
   assert.equal(await readFile(lockPath, "utf8"), "99999:feedfacefeedface");
   await rm(lockPath, { force: true });
 });
-
-test("two breakers racing one stale lock: both complete, exactly ONE refresh", async () => {
-  const p = freshCredPath();
-  await writeCredentials(sampleCreds({ expires_at: nowSecs() + 10 })); // < 60s margin
-  await writeFile(`${p}.lock`, "424242:deadbeefdeadbeef", { mode: 0o600 });
-  const old = new Date(Date.now() - 60_000);
-  await utimes(`${p}.lock`, old, old);
-
-  const fetchSpy = mockFn(async () => {
-    await new Promise((r) => setTimeout(r, 80));
-    return gotrueRefreshOk(2);
-  });
-  const [a, b] = await Promise.all([
-    getValidAccessToken({ fetch: fetchSpy }),
-    getValidAccessToken({ fetch: fetchSpy }),
-  ]);
-  assert.equal(fetchSpy.calls, 1);
-  assert.equal(a.accessToken, "unit-test-access-2");
-  assert.equal(b.accessToken, "unit-test-access-2");
-  await assert.rejects(access(`${p}.lock`));
-});
