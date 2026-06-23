@@ -13,7 +13,22 @@ param(
 
 $ErrorActionPreference = "Continue"
 
-$ClaudeDir = "$env:APPDATA\.claude"
+# Claude Code's config dir. Honor CLAUDE_CONFIG_DIR if set, else the default
+# %USERPROFILE%\.claude (Node os.homedir()), else the legacy %APPDATA%\.claude.
+# A machine may carry more than one — clean every candidate that exists so the
+# plugin/marketplace cleanup never silently no-ops on the wrong path.
+$ClaudeDirCandidates = @(
+    $env:CLAUDE_CONFIG_DIR,
+    "$env:USERPROFILE\.claude",
+    "$env:APPDATA\.claude"
+) | Where-Object { $_ } | Select-Object -Unique
+
+$ClaudeDirs = @($ClaudeDirCandidates | Where-Object { Test-Path $_ })
+if ($ClaudeDirs.Count -eq 0) {
+    # Nothing present yet — fall back to the conventional default for messaging.
+    $ClaudeDirs = @("$env:USERPROFILE\.claude")
+}
+
 # Windows XDG_CONFIG_HOME fallback — Node's os.homedir() + .config, but the
 # credentials.mjs code checks XDG_CONFIG_HOME first, then falls back to
 # homedir()/.config. On Windows %APPDATA% is the conventional config home,
@@ -159,19 +174,23 @@ if (Get-Command claude -ErrorAction SilentlyContinue) {
 Write-Host ""
 Write-Host "--- Step 2: Claude Code plugin filesystem ---"
 
-Remove-DirSafe "$ClaudeDir\plugins\cache\guild-skills" "plugin cache"
-Remove-DirSafe "$ClaudeDir\plugins\marketplaces\guild-skills" "marketplace clone"
-Remove-DirSafe "$ClaudeDir\plugins\data\ai-power-guild-guild-skills" "plugin data"
+foreach ($ClaudeDir in $ClaudeDirs) {
+    if ($ClaudeDirs.Count -gt 1) { Write-Host "  (in $ClaudeDir)" }
 
-if (-not $cliHandled) {
-    Remove-JsonKey "$ClaudeDir\plugins\installed_plugins.json" `
-        "ai-power-guild@guild-skills" `
-        "installed_plugins.json -> ai-power-guild@guild-skills"
+    Remove-DirSafe "$ClaudeDir\plugins\cache\guild-skills" "plugin cache"
+    Remove-DirSafe "$ClaudeDir\plugins\marketplaces\guild-skills" "marketplace clone"
+    Remove-DirSafe "$ClaudeDir\plugins\data\ai-power-guild-guild-skills" "plugin data"
+
+    if (-not $cliHandled) {
+        Remove-JsonKey "$ClaudeDir\plugins\installed_plugins.json" `
+            "ai-power-guild@guild-skills" `
+            "installed_plugins.json -> ai-power-guild@guild-skills"
+    }
+
+    Remove-JsonKey "$ClaudeDir\plugins\known_marketplaces.json" `
+        "guild-skills" `
+        "known_marketplaces.json -> guild-skills"
 }
-
-Remove-JsonKey "$ClaudeDir\plugins\known_marketplaces.json" `
-    "guild-skills" `
-    "known_marketplaces.json -> guild-skills"
 
 # -------------------------------------------------------------------------
 # 2b. User-scope guild skills (~/.claude/skills) — installed by install-skills.mjs

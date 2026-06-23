@@ -30,7 +30,8 @@ done
 # Resolve ~ in PROJECT_DIR
 PROJECT_DIR="${PROJECT_DIR/#\~/$HOME}"
 
-CLAUDE_DIR="$HOME/.claude"
+# Honor CLAUDE_CONFIG_DIR if set, else the default ~/.claude.
+CLAUDE_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
 GUILD_CONFIG_DIR="$HOME/.config/ai-power-guild"
 FORGEJO_HOST="forge.singleton.ai"
 
