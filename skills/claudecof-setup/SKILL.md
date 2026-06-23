@@ -61,10 +61,17 @@ the customization values, then calling the scripts.
 
 ### 1. Preflight and pick the project location
 
-First, an environment preflight: `node ../guild-connect/scripts/doctor.mjs` —
-it checks Node ≥ 18 and git and prints fixes if either is missing. If
-`guild-connect` handed you `forgejoHost` and `username` (from `git-setup`), keep
-them for step 2.
+First, the prerequisite check. **If Node or git is missing, don't silently fall
+back to a files-only setup** — use guild-connect's shell-level prereq gate
+(`guild-connect/SKILL.md`, Choreography **Step 0**): check `node --version` /
+`git --version` at the shell, then offer to install what's missing (with consent),
+falling back through guided manual install. Only when the member can't or won't
+install do you degrade to the file-only scaffold below — and when you do, say
+plainly what's **deferred** (guild connect, git access, the portable `repo/`) and
+that installing Node + git and re-running unlocks them. Once Node is present, run
+`node ../guild-connect/scripts/doctor.mjs` as the deeper check (Node ≥ 18 + git;
+it prints fixes if either is missing). If `guild-connect` handed you `forgejoHost`
+and `username` (from `git-setup`), keep them for step 2.
 
 Ask where to create the project. Default to `PersonalChiefOfStaff` in the current
 directory if the member has no preference. If a `CLAUDE.md` already exists there,

@@ -54,7 +54,7 @@ export function checkEnv(input) {
         MIN_NODE_MAJOR +
         "+ is required (found " +
         (nodeVersion == null ? "an unrecognized version" : "v" + nodeVersion) +
-        "). Install the latest LTS from https://nodejs.org , reopen your terminal, and re-run.",
+        "). Ask your AI assistant to install it for you, or install the latest LTS yourself from https://nodejs.org ; then reopen your terminal and re-run.",
   });
 
   const gitOk = !!gitExists;
@@ -63,7 +63,7 @@ export function checkEnv(input) {
     ok: gitOk,
     fix: gitOk
       ? null
-      : "git was not found on your PATH. Install it from https://git-scm.com/downloads , reopen your terminal, and re-run.",
+      : "git was not found on your PATH. Ask your AI assistant to install it for you, or install it yourself from https://git-scm.com/downloads ; then reopen your terminal and re-run.",
   });
 
   let ok = true;

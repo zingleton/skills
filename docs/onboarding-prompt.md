@@ -35,5 +35,14 @@ access, and (if you want it) a Personal Chief of Staff project seeded from your
 profile. Memory stays **off** — it's the opt-in `guild-memory` skill, activated
 per project only when you ask.
 
-Requires [Claude Code](https://code.claude.com), **Node 18+**, and **git** on
-your PATH. (Claude Code first; other assistants are future work.)
+Needs [Claude Code](https://code.claude.com). **Node 18+** and **git** are also
+required, but you don't have to install them yourself first — if either is
+missing, the skill checks for it up front and offers to install it for you (with
+your OK), so a fresh machine isn't a dead end. (Claude Code first; other
+assistants are future work.)
+
+One bootstrap wrinkle: if this is your **first run** and you don't have the plugin
+installed yet, Claude fetches the skill by `git clone` — which needs git. So if
+git is missing on a first run, Claude installs git first (with your OK), then
+clones and continues. A missing Node on first run is fine — cloning needs git, not
+Node, and the skill installs Node before it runs any scripts.

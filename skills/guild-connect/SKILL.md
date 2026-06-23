@@ -92,7 +92,56 @@ https://github.com/zingleton/skills."* When that happens:
 - Then run the steps below in order. This *is* the onboarding script — there is
   no separate prompt to paste.
 
-Run `doctor.mjs` FIRST as a preflight — if it fails, surface its fixes and stop; the rest of the flow needs Node + git. (A missing or too-old Node can't even start `doctor.mjs`, so a shell-level `node --version` check precedes it.) Then follow this order every session. The whole flow is **re-runnable**: each step is idempotent and each script derives its own done-state, so a re-run skips completed steps (`connect.mjs status` for the connection, `git ls-remote` for git access, a `repo/.git` check for the clone, `CLAUDE.md` existence for the scaffold) — the scripts, not this prose, are what make re-running safe.
+Start with **Step 0 (prerequisites)** at the shell, then run `doctor.mjs` as the deeper preflight, then the numbered steps. The whole flow is **re-runnable**: each step is idempotent and each script derives its own done-state, so a re-run skips completed steps (`connect.mjs status` for the connection, `git ls-remote` for git access, a `repo/.git` check for the clone, `CLAUDE.md` existence for the scaffold) — the scripts, not this prose, are what make re-running safe.
+
+0. **Prerequisites (Node + git) — check at the shell BEFORE any `.mjs`.** The
+   guild scripts are Node 18+ files and the git steps need git, but `doctor.mjs`
+   is *itself* a Node script — it can't even start on a machine with no Node. So
+   verify the toolchain at the shell first, then let `doctor.mjs` do the deeper
+   check once Node is known-present.
+   - Run `node --version` and `git --version`. Three outcomes: **adequate**
+     (Node ≥ 18 **and** git present) → run `doctor.mjs` and continue to step 1;
+     **missing** (either absent) or **too-old** (Node < 18, treat like missing) →
+     go to the install branch below.
+   - **Offer to install it — don't just report it missing, and don't silently
+     downgrade to a files-only setup.** You have a shell; you can install these.
+     Detect the OS and propose the matching command, **show the exact command,
+     ask consent first, and never elevate privileges silently** (consistent with
+     the Hard rules). Respect a "no."
+     - **Windows:** `winget install OpenJS.NodeJS.LTS` / `winget install Git.Git`
+     - **macOS:** git → `xcode-select --install`; Node → the LTS `.pkg` from
+       https://nodejs.org (or `brew install node` / `brew install git` when
+       Homebrew is already present)
+     - **Linux:** the distro package manager (`sudo apt-get install -y nodejs git`
+       or `sudo dnf install -y nodejs git`); when the distro's Node is < 18, use
+       NodeSource for an 18+ build
+   - **Re-verify, and handle "installed but not on PATH."** After an install,
+     re-run `node --version` / `git --version`. A freshly installed binary often
+     isn't visible in the *current* shell (common on Windows after `winget`) —
+     when that happens, tell the member to open a **new terminal** and re-run the
+     onboarding one-liner; do **not** retry-loop on a binary this process can't
+     see. Cap it at a couple of re-checks, then fall back.
+   - **Fallback ladder (no dead ends).** If the install can't proceed — no
+     package manager, no rights, the command errors, or the member declines —
+     fall back to **guided manual install**: give the official installer link
+     (https://nodejs.org , https://git-scm.com/downloads), have them install and
+     reopen the terminal, then re-check. If they still can't or won't, **degrade
+     to a file-only setup**: connect/intake/profile/git/repo all need Node or git,
+     so the only thing you can do now is offer the Chief of Staff scaffold
+     (`claudecof-setup` writes files without Node — see its preflight). State
+     plainly what's **deferred** (guild connect, git access, the portable `repo/`)
+     and how to **resume**: install Node + git, reopen the terminal, and re-run
+     the onboarding one-liner — the idempotent flow picks up the deferred steps.
+   - **doctor.mjs failures route here too.** Once Node can run, a `doctor.mjs`
+     check with `ok: false` (git missing, or Node too old) means the same thing —
+     take it into this install branch rather than just surfacing the `fix` line
+     and stopping.
+   - **git-before-clone (fresh-machine first run).** When the skill isn't
+     installed yet and you reached this via the one-liner, you got here by
+     `git clone` — which needs git. So a *no-git* first run can't reach this
+     in-repo gate at all; that one case is handled by the onboarding prompt's own
+     text (install git first, then clone). A *no-Node* first run is fine: the
+     clone needs git, not Node, and this gate catches Node before any `.mjs` runs.
 
 1. **Connect check.** Run `connect.mjs status`. On `status: "connected"`,
    continue. On `not_connected` or `reconnect_required`, link the account with

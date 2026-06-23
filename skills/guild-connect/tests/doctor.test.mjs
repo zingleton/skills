@@ -48,6 +48,11 @@ test("checkEnv fails the node check on too-old Node but still evaluates git", ()
   assert.equal(node.ok, false);
   assert.match(node.fix, /Node 18\+ is required/);
   assert.match(node.fix, /v16/);
+  // The fix offers the agent-install path AND keeps the manual-install URL as a
+  // fallback, and stays agent-neutral so it reads correctly at a bare terminal too.
+  assert.match(node.fix, /install it for you/);
+  assert.match(node.fix, /or install the latest LTS yourself/);
+  assert.match(node.fix, /https:\/\/nodejs\.org/);
   // git was still evaluated and reported ok — one failing check doesn't skip the other.
   assert.equal(git.ok, true);
   assert.equal(git.fix, null);
@@ -59,6 +64,10 @@ test("checkEnv fails the git check with a fix string when git is absent", () => 
   const git = r.checks.find((c) => c.name === "git");
   assert.equal(git.ok, false);
   assert.match(git.fix, /git was not found/);
+  // Same agent-install-with-manual-fallback shape as the node fix.
+  assert.match(git.fix, /install it for you/);
+  assert.match(git.fix, /or install it yourself/);
+  assert.match(git.fix, /https:\/\/git-scm\.com\/downloads/);
 });
 
 test("checkEnv reports an unrecognized version when nodeVersion is null", () => {
