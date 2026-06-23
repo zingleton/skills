@@ -11,16 +11,24 @@ That's the whole prompt. The detailed steps live in the skill itself
 
 ## What happens
 
-- **If `guild-connect` is already installed** (you've onboarded before, or run
-  the installer), the sentence triggers the skill and it runs its onboarding
-  choreography, using the email you gave it.
+- **If `guild-connect` is already installed** (you've onboarded before, or
+  installed the plugin), the sentence triggers the skill and it runs its
+  onboarding choreography, using the email you gave it.
 - **If it isn't installed yet** (first time on this machine), Claude clones
   `https://github.com/zingleton/skills` and follows
-  `skills/guild-connect/SKILL.md` from the clone. The final choreography step
-  runs `install-skills.mjs`, which installs `guild-connect`, `claudecof-setup`,
-  and `guild-memory` into `~/.claude/skills/` — so every future session has them
-  with **no marketplace and no clone**. Re-running the installer is the update
-  path.
+  `skills/guild-connect/SKILL.md` from the clone — the skills run from that clone
+  for this session.
+
+At the end, onboarding offers **two equal ways** to keep the skills for future
+sessions:
+
+- **In-session:** run `install-skills.mjs`, which installs `guild-connect`,
+  `claudecof-setup`, and `guild-memory` into `~/.claude/skills/` (re-run to
+  update). May need a one-time permission grant.
+- **Terminal (durable):** paste into a terminal — **not** a running session —
+  `claude plugin marketplace add zingleton/skills` then
+  `claude plugin install ai-power-guild@guild-skills`. Cleanest ongoing
+  permissions.
 
 End state: a connected account, your intake + public profile filled in, git
 access, and (if you want it) a Personal Chief of Staff project seeded from your

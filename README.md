@@ -12,26 +12,35 @@ app and help members get set up. The plugin bundles:
   server). Off until you activate it for a chosen project; onboarding never turns
   it on.
 
-## Paste-to-onboard (recommended)
+## Getting set up — two equal paths
 
-The simplest way in: **paste one sentence** into a fresh Claude Code session
-(swap in your guild email):
+Pick whichever fits. Both end in the same place (connected account → intake +
+profile → git → optional Personal Chief of Staff). Requires
+[Claude Code](https://code.claude.com), **Node 18+, and git** on your PATH.
+
+- **Option A — paste an AI prompt** (no terminal): set up right now, inside a
+  Claude Code session. The skills run from a clone for that session.
+- **Option B — install the plugin** (one terminal step): the skills are
+  installed permanently for every future session, with the fewest prompts.
+
+You can start with A today and run B later to make it stick.
+
+## Option A — Paste an AI prompt (no terminal)
+
+**Paste one sentence** into a fresh Claude Code session (swap in your guild
+email):
 
 > **Onboard me to the AI Power Guild using the guild-connect skill from
 > https://github.com/zingleton/skills — my guild email is you@example.com.**
 
-It onboards you end-to-end and installs the guild skills at **user scope**
-(`~/.claude/skills/`) so they load in every future session — no marketplace, no
-`claude plugin install`. The steps live in the skill itself
+It onboards you end-to-end. The steps live in the skill itself
 ([guild-connect's SKILL.md](skills/guild-connect/SKILL.md), the Choreography
-section); see [docs/onboarding-prompt.md](docs/onboarding-prompt.md) for the
-details of what happens.
+section); see [docs/onboarding-prompt.md](docs/onboarding-prompt.md) for what
+happens. To keep the skills for future sessions without a clone, onboarding ends
+by offering either the user-scope installer (`install-skills.mjs`, re-run to
+update) or Option B below.
 
-Requires [Claude Code](https://code.claude.com), **Node 18+, and git** on your
-PATH. Re-running the installer (`install-skills.mjs`) is the update path. The
-marketplace plugin below is an **optional** follow-up, not a prerequisite.
-
-## Install (optional marketplace plugin)
+## Option B — Install the plugin (terminal, durable)
 
 > **Install the plugin from your terminal — not from inside a Claude Code
 > session, and don't ask Claude to install it for you.** Plugin installation is
@@ -103,8 +112,8 @@ Once installed, just ask Claude in natural language:
 
 ## Updating
 
-**Paste-to-onboard install:** re-run the installer to refresh the user-scope
-skills — no marketplace needed:
+**Option A (user-scope install):** re-run the installer to refresh the
+user-scope skills — no marketplace needed:
 
 ```bash
 node skills/guild-connect/scripts/install-skills.mjs
@@ -113,7 +122,7 @@ node skills/guild-connect/scripts/install-skills.mjs
 (Run it from a `zingleton/skills` checkout, or just re-paste the onboarding
 instruction.)
 
-**Marketplace plugin (optional):** if you installed the plugin instead, refresh
+**Option B (marketplace plugin):** if you installed the plugin, refresh
 the catalog **then** the plugin — at the terminal. The first command updates the
 marketplace listing; the second installs the new version, so running only the
 second won't pick up a release. Then `/reload-plugins` in any open session (or

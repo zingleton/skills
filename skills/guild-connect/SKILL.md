@@ -170,14 +170,20 @@ Run `doctor.mjs` FIRST as a preflight — if it fails, surface its fixes and sto
      isn't available, or when you are not in Claude Code — that skill scaffolds
      a Claude Code project and only makes sense there. Don't push if the member
      declines; this is a suggestion, not part of the account setup.
-8. **Install the skills at user scope (Claude Code).** Finish by running
-   `node scripts/install-skills.mjs`. It copies `guild-connect`,
-   `claudecof-setup`, and `guild-memory` into `~/.claude/skills/` so every future
-   session has them without a clone or marketplace; re-running it is the update
-   path. Then tell the member: the skills are now available everywhere, the
-   marketplace plugin is an optional follow-up (not required), and memory is the
-   opt-in `guild-memory` skill — off until they activate it for a project.
-   (Skip only when not in Claude Code.)
+8. **Make the skills durable (Claude Code).** The skills work this session; offer
+   the member **two equal ways** to keep them for every future session, and let
+   them choose:
+   - **Terminal (marketplace plugin).** Give them this to paste into a terminal —
+     **not** a running session (plugin install is a host op that won't take effect
+     mid-session): `claude plugin marketplace add zingleton/skills` then
+     `claude plugin install ai-power-guild@guild-skills`. Cleanest ongoing
+     permissions; update later with `claude plugin update ai-power-guild@guild-skills`.
+   - **In-session (user-scope install).** Run `node scripts/install-skills.mjs` to
+     copy `guild-connect`, `claudecof-setup`, and `guild-memory` into
+     `~/.claude/skills/`. It may need a one-time permission grant (it writes
+     user-scope config); re-running it is the update path.
+   Either way, remind them memory is the opt-in `guild-memory` skill — off until
+   they activate it for a project. (Skip when not in Claude Code.)
 
 ## Hard rules
 

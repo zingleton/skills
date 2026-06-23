@@ -60,13 +60,18 @@ gracefully when the guild isn't connected. `guild-memory` imports
 `guild-connect`'s `credentials.mjs` / `api.mjs` via `../../guild-connect/scripts/`,
 so the user-scope installer always installs all three skills together.
 
-**Onboarding installs skills at user scope.** The paste-able instruction
-(`docs/onboarding-prompt.md`) runs onboarding, then `install-skills.mjs` copies
-`guild-connect`, `claudecof-setup`, and `guild-memory` into `~/.claude/skills/`
-— no marketplace, no `claude plugin install`. Re-running the installer is the
-update path. The marketplace plugin is an optional follow-up. **Memory is
-opt-in:** the plugin no longer auto-loads memory hooks (v0.4.0); a member turns
-memory on for one project via `guild-memory`'s `memory-activate.mjs`.
+**Onboarding offers two equal install paths.** The paste-able instruction
+(`docs/onboarding-prompt.md`) runs onboarding from the skill's choreography, then
+at the end offers two equal ways to make the skills durable: **in-session**
+`install-skills.mjs` (copies `guild-connect`, `claudecof-setup`, `guild-memory`
+into `~/.claude/skills/`; re-run to update), or the **terminal** marketplace
+plugin (`claude plugin marketplace add zingleton/skills` →
+`claude plugin install ai-power-guild@guild-skills`; cleanest ongoing
+permissions). The in-session installer can trip a self-modifying-config
+permission guardrail, which the terminal path avoids (see the welcome-page note
+in `docs/aisupply-welcome-page-onboarding-note.md`). **Memory is opt-in:** the
+plugin no longer auto-loads memory hooks (v0.4.0); a member turns memory on for
+one project via `guild-memory`'s `memory-activate.mjs`.
 
 ## Working in this repo
 
