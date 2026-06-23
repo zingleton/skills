@@ -14,13 +14,18 @@ app and help members get set up. The plugin bundles:
 
 ## Paste-to-onboard (recommended)
 
-The simplest way in: **paste one instruction** into a fresh Claude Code session
-and it onboards you end-to-end, then installs the guild skills at **user scope**
-(`~/.claude/skills/`) so they load in every future session — no marketplace, no
-`claude plugin install`.
+The simplest way in: **paste one sentence** into a fresh Claude Code session
+(swap in your guild email):
 
-➡️ **[docs/onboarding-prompt.md](docs/onboarding-prompt.md)** — copy the block
-there and paste it as your first message.
+> **Onboard me to the AI Power Guild using the guild-connect skill from
+> https://github.com/zingleton/skills — my guild email is you@example.com.**
+
+It onboards you end-to-end and installs the guild skills at **user scope**
+(`~/.claude/skills/`) so they load in every future session — no marketplace, no
+`claude plugin install`. The steps live in the skill itself
+([guild-connect's SKILL.md](skills/guild-connect/SKILL.md), the Choreography
+section); see [docs/onboarding-prompt.md](docs/onboarding-prompt.md) for the
+details of what happens.
 
 Requires [Claude Code](https://code.claude.com), **Node 18+, and git** on your
 PATH. Re-running the installer (`install-skills.mjs`) is the update path. The

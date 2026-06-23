@@ -81,6 +81,17 @@ the permission analyzer to flag; inline JSON still works when you need it.
 
 ## Choreography
 
+**One-line invocation.** A member can kick off the whole onboarding with a single
+sentence — e.g. *"Onboard andy@singleton.ai using the guild-connect skill from
+https://github.com/zingleton/skills."* When that happens:
+- **Use the email they gave you** for the connect step — don't re-ask for it.
+- **If guild-connect isn't installed yet** (you're reading this from a fresh
+  clone of the repo, not from `~/.claude/skills/`), run the scripts from the
+  clone's `skills/guild-connect/scripts/`. The final step (8) then installs the
+  skills at user scope so future sessions have them without a clone.
+- Then run the steps below in order. This *is* the onboarding script — there is
+  no separate prompt to paste.
+
 Run `doctor.mjs` FIRST as a preflight — if it fails, surface its fixes and stop; the rest of the flow needs Node + git. (A missing or too-old Node can't even start `doctor.mjs`, so a shell-level `node --version` check precedes it.) Then follow this order every session. The whole flow is **re-runnable**: each step is idempotent and each script derives its own done-state, so a re-run skips completed steps (`connect.mjs status` for the connection, `git ls-remote` for git access, a `repo/.git` check for the clone, `CLAUDE.md` existence for the scaffold) — the scripts, not this prose, are what make re-running safe.
 
 1. **Connect check.** Run `connect.mjs status`. On `status: "connected"`,
@@ -92,8 +103,8 @@ Run `doctor.mjs` FIRST as a preflight — if it fails, surface its fixes and sto
      `bad_code` (the code expired or was already used), point them at the
      **Connect your AI** page (linked from their profile) to get a fresh code,
      then verify that. A terminal `send <email>` also works if they'd rather.
-   - Otherwise, ask the member for the email on their guild account, then
-     `connect.mjs send <email>`.
+   - Otherwise, use the email the member gave you in the request (only ask if
+     they didn't supply one), then `connect.mjs send <email>`.
    - On `sent`, ask the member to read the 6-digit code from the NEWEST email
      and relay it to you, then `connect.mjs verify <email> <code>`. On
      `bad_code` request a fresh code (`send` again) and verify the newest one —
@@ -159,6 +170,14 @@ Run `doctor.mjs` FIRST as a preflight — if it fails, surface its fixes and sto
      isn't available, or when you are not in Claude Code — that skill scaffolds
      a Claude Code project and only makes sense there. Don't push if the member
      declines; this is a suggestion, not part of the account setup.
+8. **Install the skills at user scope (Claude Code).** Finish by running
+   `node scripts/install-skills.mjs`. It copies `guild-connect`,
+   `claudecof-setup`, and `guild-memory` into `~/.claude/skills/` so every future
+   session has them without a clone or marketplace; re-running it is the update
+   path. Then tell the member: the skills are now available everywhere, the
+   marketplace plugin is an optional follow-up (not required), and memory is the
+   opt-in `guild-memory` skill — off until they activate it for a project.
+   (Skip only when not in Claude Code.)
 
 ## Hard rules
 
