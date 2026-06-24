@@ -140,6 +140,11 @@ export async function clearCredentials() {
 
 async function acquireLock(lockPath, { lockRetryMs, lockTimeoutMs, lockStaleMs }) {
   const deadline = Date.now() + lockTimeoutMs;
+  const lockBusyError = () =>
+    new Error(
+      "Another guild process is holding the credentials lock. " +
+        "Wait a moment and try again (a stale lock clears itself after 30 seconds).",
+    );
   // pid:nonce contents — release and stale-break verify the contents before
   // unlinking, so neither path can ever remove a lock it didn't observe
   // (kills the stat→unlink TOCTOU against a new holder).
@@ -157,27 +162,59 @@ async function acquireLock(lockPath, { lockRetryMs, lockTimeoutMs, lockStaleMs }
       }
       return token;
     } catch (err) {
-      if (err?.code !== "EEXIST") throw err;
-      // Break locks left by crashed processes — read the contents alongside
-      // the stale mtime, then unlink only if the contents are STILL the
-      // observed-stale value (a new holder wrote a different pid:nonce).
+      // EEXIST is normal contention. On Windows, a lock caught mid rename/unlink
+      // by another racer surfaces as EPERM/EACCES instead — also transient
+      // contention, not a real failure; back off and retry (the deadline below
+      // bounds it). Anything else is a genuine error.
+      const code = err?.code;
+      if (code !== "EEXIST" && code !== "EPERM" && code !== "EACCES") throw err;
+      // Break locks left by crashed processes. A plain stat→unlink (even with a
+      // re-read) is racy: two breakers can both observe the same stale file and
+      // both unlink, with the second unlink deleting whatever a winner just
+      // re-created — so both "acquire" and both refresh. Instead break it
+      // ATOMICALLY: rename the stale lock aside to a per-breaker name. rename
+      // moves an inode atomically, so for one lockPath exactly ONE breaker wins
+      // and every loser sees ENOENT and simply retries the open. We then verify
+      // the file we captured is the stale one we saw; if a holder slipped in and
+      // we captured a FRESH lock, we put it back untouched rather than delete it.
+      let observed, s;
       try {
-        const observed = await readFile(lockPath, "utf8");
-        const s = await stat(lockPath);
-        if (Date.now() - s.mtimeMs > lockStaleMs) {
-          const again = await readFile(lockPath, "utf8").catch(() => null);
-          if (again === observed) await unlink(lockPath).catch(() => {});
+        observed = await readFile(lockPath, "utf8");
+        s = await stat(lockPath);
+      } catch (e2) {
+        if (e2?.code === "ENOENT") continue; // vanished — the next open will win
+        // A transient inspection error (e.g. Windows EPERM mid-transition).
+        if (Date.now() > deadline) throw lockBusyError();
+        await new Promise((r) => setTimeout(r, lockRetryMs));
+        continue;
+      }
+      if (Date.now() - s.mtimeMs > lockStaleMs) {
+        // The token carries a ":" (pid:nonce) which is illegal in a Windows
+        // filename, so derive a filesystem-safe, per-breaker aside name.
+        const aside = `${lockPath}.stale-${token.replace(":", "-")}`;
+        try {
+          await rename(lockPath, aside);
+        } catch {
+          // Another breaker already moved/removed it, or the rename failed
+          // transiently. Back off and retry — but honor the deadline so a
+          // persistently-failing rename can never spin the loop forever.
+          if (Date.now() > deadline) throw lockBusyError();
+          await new Promise((r) => setTimeout(r, lockRetryMs));
           continue;
         }
-      } catch {
-        continue; // lock vanished between open and stat — retry immediately
+        const moved = await readFile(aside, "utf8").catch(() => null);
+        const ms = await stat(aside).catch(() => null);
+        if (moved === observed && ms && Date.now() - ms.mtimeMs > lockStaleMs) {
+          await unlink(aside).catch(() => {}); // confirmed stale — drop it
+        } else {
+          // A live/newer holder slipped in between our inspection and rename;
+          // restore its lock so it keeps its hold (fall back to dropping our
+          // stolen copy if the path was meanwhile retaken).
+          await rename(aside, lockPath).catch(() => unlink(aside).catch(() => {}));
+        }
+        continue;
       }
-      if (Date.now() > deadline) {
-        throw new Error(
-          "Another guild process is holding the credentials lock. " +
-            "Wait a moment and try again (a stale lock clears itself after 30 seconds).",
-        );
-      }
+      if (Date.now() > deadline) throw lockBusyError();
       await new Promise((r) => setTimeout(r, lockRetryMs));
     }
   }

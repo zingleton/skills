@@ -333,3 +333,49 @@ test("release after a stale-break does NOT remove the new holder's lock", async 
   assert.equal(await readFile(lockPath, "utf8"), "99999:feedfacefeedface");
   await rm(lockPath, { force: true });
 });
+
+test("two breakers racing one stale lock: exactly ONE refresh, every time", async () => {
+  // The stale-break is a known TOCTOU trap: two callers can both observe the
+  // same stale lock and, with a naive stat→unlink, both delete it — the second
+  // unlink removing the lock a winner just re-created, so BOTH acquire and BOTH
+  // refresh (fatal: Supabase refresh tokens are single-use). A single wall-clock
+  // race exposes that only intermittently, so drive the scenario in a tight loop
+  // with a fast injected refresh: the bug fails ~every run, the fix passes all.
+  // The race lives in the break window, not in the retry interval — so we tune
+  // the lock timings tight (tiny retry, short stale threshold) to keep it fast.
+  //
+  // Cost: ~2s for the full loop. To keep the everyday `npm test` snappy this
+  // runs a tiny SMOKE pass (just proves the break path works) by default, and
+  // the full regression sweep only under RACE_TEST=1 or in CI. Run the real
+  // guard locally with:  RACE_TEST=1 npm test
+  const FULL = process.env.RACE_TEST === "1" || !!process.env.CI;
+  const ITERATIONS = FULL ? 80 : 4;
+  const lockOpts = { lockRetryMs: 2, lockStaleMs: 1000, lockTimeoutMs: 4000 };
+  let doubleRefreshes = 0;
+  let leakedLocks = 0;
+
+  for (let i = 0; i < ITERATIONS; i++) {
+    const p = freshCredPath();
+    await writeCredentials(sampleCreds({ expires_at: nowSecs() + 10 })); // < 60s margin
+    await writeFile(`${p}.lock`, "424242:deadbeefdeadbeef", { mode: 0o600 });
+    const old = new Date(Date.now() - 60_000); // well past lockStaleMs → stale
+    await utimes(`${p}.lock`, old, old);
+
+    const fetchSpy = mockFn(async () => {
+      await new Promise((r) => setTimeout(r, 5)); // short, to widen the contention window
+      return gotrueRefreshOk(2);
+    });
+    const [a, b] = await Promise.all([
+      getValidAccessToken({ fetch: fetchSpy, ...lockOpts }),
+      getValidAccessToken({ fetch: fetchSpy, ...lockOpts }),
+    ]);
+
+    if (fetchSpy.calls !== 1) doubleRefreshes++;
+    assert.equal(a.accessToken, "unit-test-access-2");
+    assert.equal(b.accessToken, "unit-test-access-2");
+    if (await access(`${p}.lock`).then(() => true, () => false)) leakedLocks++;
+  }
+
+  assert.equal(doubleRefreshes, 0, `expected 0 double-refreshes across ${ITERATIONS} runs`);
+  assert.equal(leakedLocks, 0, `expected 0 leaked locks across ${ITERATIONS} runs`);
+});
