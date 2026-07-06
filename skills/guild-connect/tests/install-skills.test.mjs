@@ -6,7 +6,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtemp, rm, mkdir, writeFile, readFile, access } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import {
   skillsToInstall,
@@ -16,8 +17,12 @@ import {
 
 // --- pure helpers -----------------------------------------------------------
 
-test("skillsToInstall returns the three guild skill folder names", () => {
-  assert.deepEqual(skillsToInstall(), ["guild-connect", "claudecof-setup", "guild-memory"]);
+test("skillsToInstall returns only the bootstrap folders (connect + installer)", () => {
+  // U8/R13: the Chief of Staff setup and portable memory now ship via the
+  // catalog, not the bootstrap — so they are deliberately absent here.
+  assert.deepEqual(skillsToInstall(), ["guild-connect", "guild-skills"]);
+  assert.equal(skillsToInstall().includes("claudecof-setup"), false);
+  assert.equal(skillsToInstall().includes("guild-memory"), false);
 });
 
 test("defaultUserSkillsDir honors the env override, else ~/.claude/skills", () => {
@@ -26,6 +31,15 @@ test("defaultUserSkillsDir honors the env override, else ~/.claude/skills", () =
     "/custom/skills",
   );
   assert.equal(defaultUserSkillsDir({}, "/home/u"), join("/home/u", ".claude", "skills"));
+});
+
+test("every bootstrap skill folder actually exists in the repo with a SKILL.md", async () => {
+  // scripts/tests → guild-connect → skills → repo root.
+  const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
+  for (const name of skillsToInstall()) {
+    const skillMd = join(repoRoot, "skills", name, "SKILL.md");
+    await access(skillMd); // throws if the bootstrap references a missing skill
+  }
 });
 
 // --- orchestrator against a temp filesystem ---------------------------------
@@ -53,7 +67,7 @@ test("installSkills copies each skill folder into the target dir", async () => {
     const result = await installSkills({ skillsSrcDir: src, userSkillsDir: userDir });
 
     assert.equal(result.ok, true);
-    assert.equal(result.installed.length, 3);
+    assert.equal(result.installed.length, skillsToInstall().length);
     for (const name of skillsToInstall()) {
       assert.equal(await exists(join(userDir, name, "SKILL.md")), true, `${name} SKILL.md`);
       assert.equal(await exists(join(userDir, name, "scripts", "run.mjs")), true, `${name} script`);
@@ -89,7 +103,7 @@ test("re-running refreshes in place (update path) and drops stale files", async 
 
     const result = await installSkills({ skillsSrcDir: src, userSkillsDir: userDir });
 
-    assert.equal(result.installed.length, 3, "no duplication on re-run");
+    assert.equal(result.installed.length, skillsToInstall().length, "no duplication on re-run");
     assert.equal(
       await exists(join(userDir, "guild-connect", "old-removed.mjs")),
       false,

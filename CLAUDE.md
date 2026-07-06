@@ -48,6 +48,11 @@ skills/
     scripts/*.mjs            Memory scripts (import guild-connect's credentials.mjs/api.mjs as siblings)
       memory-activate.mjs    Writes the capture hooks into a target project's .claude/settings.json
     tests/*.test.mjs         Unit tests
+  guild-skills/              Skills-catalog installer (skills-delivery U5-U7)
+    SKILL.md                 Browse / install / update / uninstall / promote / harvest
+    scripts/*.mjs            catalog, install, uninstall, promote, status, update, harvest +
+                             shared scopes/lockfile/fetch-skill (imports guild-connect api/creds)
+    tests/*.test.mjs         Unit tests (node --test)
 docs/onboarding-prompt.md    The single paste-able onboarding instruction (user-scope install)
 CLAUDE.md                    This file
 package.json                 npm test → unit tests for all skills
@@ -56,9 +61,20 @@ package.json                 npm test → unit tests for all skills
 
 Skills may reuse each other: `claudecof-setup` calls `guild-connect`'s scripts
 (`../guild-connect/scripts/`) to pre-fill a member's details, degrading
-gracefully when the guild isn't connected. `guild-memory` imports
-`guild-connect`'s `credentials.mjs` / `api.mjs` via `../../guild-connect/scripts/`,
-so the user-scope installer always installs all three skills together.
+gracefully when the guild isn't connected. `guild-memory` and `guild-skills`
+import `guild-connect`'s `credentials.mjs` / `api.mjs` via
+`../../guild-connect/scripts/`.
+
+**Bootstrap vs. catalog (skills-delivery U8, R13).** The marketplace plugin and
+the in-session `install-skills.mjs` now bootstrap only two skills:
+`guild-connect` (connect/credentials) and `guild-skills` (the catalog
+installer). The **Chief of Staff setup** (`claudecof-setup`) and **portable
+memory** (`guild-memory`) are no longer auto-installed — they ship as
+**catalog entries** and are installed on demand with `guild-skills install`.
+Their skill folders stay in this repo because the catalog pins point at them
+(`zingleton/skills` @ a curator-evaluated commit). Create/curate those catalog
+entries through the app's `POST /api/skills-catalog/manage` API with a
+guide/admin credential (see `docs/skills-catalog-migration.md`).
 
 **Onboarding offers two equal install paths.** The paste-able instruction
 (`docs/onboarding-prompt.md`) runs onboarding from the skill's choreography, then

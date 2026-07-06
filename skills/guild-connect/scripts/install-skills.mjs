@@ -28,9 +28,16 @@ const SKILLS_SRC = join(REPO_ROOT, "skills");
 
 const slash = (p) => p.split("\\").join("/");
 
-/** The guild skill folders the installer copies, as a fixed inventory. */
+/**
+ * The BOOTSTRAP skill folders the in-session installer copies (skills-delivery
+ * U8, R13): just the connect plumbing and the guild-skills installer. The
+ * Chief of Staff setup and portable memory are no longer bootstrapped here —
+ * they ship through the skills catalog and are installed on demand with
+ * `guild-skills install`. guild-skills reuses guild-connect's credential/api
+ * modules via `../../guild-connect/scripts/`, so the two install together.
+ */
 export function skillsToInstall() {
-  return ["guild-connect", "claudecof-setup", "guild-memory"];
+  return ["guild-connect", "guild-skills"];
 }
 
 /**
