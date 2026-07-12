@@ -47,7 +47,7 @@ the permission analyzer to flag; inline JSON still works when you need it.
 | `node scripts/avatar.mjs upload <file>` | Uploads photo bytes (JPEG/PNG/WebP, ≤2MB) after local validation. |
 | `node scripts/avatar.mjs remove` | Removes the current photo (web-parity read-merge-write save with `picture: {state: "removed"}`; the other profile fields are carried through unchanged). |
 | `node scripts/git-setup.mjs` | One-time: provisions the member's Forgejo git access and installs a durable, per-device git credential into the OS store so plain `git clone/pull/push` works with no prompt. Stdout is `{ok, forgejoHost, username, helper, plaintextWarning}` — never the token. Re-running replaces this device's token. |
-| `node scripts/repo-setup.mjs '<json>'` | Clones the member's `personal` repo into `<targetDir>/repo` and seeds the COF's durable layer (memory/skills/Tools) — seed-only-if-absent, commit+push only when it seeded, **never pulls** an existing clone (the COF owns its own sync). Takes `{targetDir, forgejoHost, username}`; host+username come from `git-setup`'s stdout — it **never re-mints** the git token. Stdout `{ok, repoDir, cloned, seeded, pushed}`. Safe to re-run. |
+| `node scripts/repo-setup.mjs '<json>'` | Clones the member's `personal` repo into `<targetDir>/repo` and seeds the COF's durable layer (memory/skills/Tools) — seed-only-if-absent, commit+push only when it seeded, **never pulls** an existing clone (the COF owns its own sync). Takes `{targetDir, forgejoHost, username}`; host+username come from `git-setup`'s stdout — it **never re-mints** the git token. Stdout `{ok, repoDir, cloned, seeded, pushed}` — note `cloned` reports whether a clone **already existed before this run** (so it is `false` on the run that creates the clone). Safe to re-run. |
 
 ### Contract notes
 
@@ -216,22 +216,32 @@ Start with **Step 0 (prerequisites)** at the shell, then run `doctor.mjs` as the
      is never a dead end: skills that build on the repo (e.g. the Personal
      Chief of Staff project from the skills catalog) run `repo-setup` themselves
      when they need it.
-8. **Make the skills durable (Claude Code).** The skills work this session; offer
-   the member **two equal ways** to keep them for every future session, and let
-   them choose:
-   - **Terminal (marketplace plugin).** Give them this to paste into a terminal —
-     **not** a running session (plugin install is a host op that won't take effect
-     mid-session): `claude plugin marketplace add zingleton/skills` then
-     `claude plugin install ai-power-guild@guild-skills`. Cleanest ongoing
-     permissions; update later with `claude plugin update ai-power-guild@guild-skills`.
-   - **In-session (user-scope install).** Run `node scripts/install-skills.mjs` to
-     copy the bootstrap pair — `guild-connect` and `guild-skills` (the catalog
-     installer) — into `~/.claude/skills/`. It may need a one-time permission
-     grant (it writes user-scope config); re-running it is the update path.
+8. **Make the skills durable.** The skills work this session; offer the member
+   the install path for the harness they are in so future sessions have them
+   too:
+   - **Claude Code — two equal ways; let the member choose:**
+     - **Terminal (marketplace plugin).** Give them this to paste into a
+       terminal — **not** a running session (plugin install is a host op that
+       won't take effect mid-session): `claude plugin marketplace add
+       zingleton/skills` then `claude plugin install ai-power-guild@guild-skills`.
+       Cleanest ongoing permissions; update later with
+       `claude plugin update ai-power-guild@guild-skills`.
+     - **In-session (user-scope install).** Run `node scripts/install-skills.mjs`
+       to copy the bootstrap pair — `guild-connect` and `guild-skills` (the
+       catalog installer) — into `~/.claude/skills/`. It may need a one-time
+       permission grant (it writes user-scope config); re-running it is the
+       update path.
+   - **Hermes agent:** the same `node scripts/install-skills.mjs` detects the
+     Hermes home and installs the pair into `~/.hermes/skills/` (honoring
+     `$HERMES_HOME`), where they load as agentskills.io skills and appear as
+     slash commands. The platform-native alternative is
+     `hermes skills install` pointed at this repo.
+   - **Other harnesses:** set `AI_POWER_GUILD_SKILLS_DIR` to the harness's
+     skills directory and run the installer.
    Either way, everything beyond the bootstrap pair (the Personal Chief of Staff
    setup, portable memory, …) comes from the skills catalog afterwards via
    `guild-skills install`, and memory stays opt-in — off until the member
-   activates it for a project. (Skip when not in Claude Code.)
+   activates it for a project.
 
 ## Hard rules
 

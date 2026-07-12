@@ -10,12 +10,15 @@
 // duplication). Credential/secret files never live inside the repo skill
 // folders, and the copy filter skips them defensively just in case.
 //
-// The user skills dir is ~/.claude/skills/ by default, overridable with
-// AI_POWER_GUILD_SKILLS_DIR (used by tests, and honored identically by
-// guild-memory's memory-activate.mjs when it resolves the installed hook path).
+// The user skills dir is resolved per harness (Hermes agents use
+// ~/.hermes/skills/, Claude Code uses ~/.claude/skills/ — see
+// defaultUserSkillsDir), overridable with AI_POWER_GUILD_SKILLS_DIR (used by
+// tests, and honored identically by guild-memory's memory-activate.mjs when it
+// resolves the installed hook path).
 //
 // Stdout is machine-readable JSON; human copy goes to stderr.
 
+import { existsSync } from "node:fs";
 import { cp, rm, mkdir } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -41,12 +44,25 @@ export function skillsToInstall() {
 }
 
 /**
- * Resolve the user-scope skills directory. AI_POWER_GUILD_SKILLS_DIR overrides
- * (tests, locked-down harnesses); otherwise ~/.claude/skills/. Shared with
- * memory-activate.mjs so both resolve the same install location.
+ * Resolve the user-scope skills directory. Detection ladder:
+ *
+ *   1. AI_POWER_GUILD_SKILLS_DIR — explicit override (tests, locked-down
+ *      harnesses); always wins.
+ *   2. Inside Claude Code (CLAUDECODE env set) → ~/.claude/skills/ — the
+ *      harness we are running in beats whatever else is on disk.
+ *   3. A Hermes agent home ($HERMES_HOME, else ~/.hermes) exists →
+ *      <hermesHome>/skills/ (the agentskills.io dir Hermes loads from).
+ *   4. Fallback → ~/.claude/skills/.
+ *
+ * Shared with memory-activate.mjs so both resolve the same install location.
+ * `exists` is injectable for tests.
  */
-export function defaultUserSkillsDir(env = process.env, home = homedir()) {
-  return env.AI_POWER_GUILD_SKILLS_DIR || join(home, ".claude", "skills");
+export function defaultUserSkillsDir(env = process.env, home = homedir(), exists = existsSync) {
+  if (env.AI_POWER_GUILD_SKILLS_DIR) return env.AI_POWER_GUILD_SKILLS_DIR;
+  if (env.CLAUDECODE) return join(home, ".claude", "skills");
+  const hermesHome = env.HERMES_HOME || join(home, ".hermes");
+  if (exists(hermesHome)) return join(hermesHome, "skills");
+  return join(home, ".claude", "skills");
 }
 
 // Never carry a credential/secret file into the user-scope copy. These don't

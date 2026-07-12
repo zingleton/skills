@@ -30,7 +30,43 @@ test("defaultUserSkillsDir honors the env override, else ~/.claude/skills", () =
     defaultUserSkillsDir({ AI_POWER_GUILD_SKILLS_DIR: "/custom/skills" }, "/home/u"),
     "/custom/skills",
   );
-  assert.equal(defaultUserSkillsDir({}, "/home/u"), join("/home/u", ".claude", "skills"));
+  const never = () => false;
+  assert.equal(defaultUserSkillsDir({}, "/home/u", never), join("/home/u", ".claude", "skills"));
+});
+
+test("defaultUserSkillsDir detects a Hermes agent home (~/.hermes → its skills dir)", () => {
+  const hermesAt = (path) => (p) => p === path;
+  // ~/.hermes exists → install into the Hermes skills dir.
+  assert.equal(
+    defaultUserSkillsDir({}, "/home/u", hermesAt(join("/home/u", ".hermes"))),
+    join("/home/u", ".hermes", "skills"),
+  );
+  // $HERMES_HOME beats the ~/.hermes default location.
+  assert.equal(
+    defaultUserSkillsDir({ HERMES_HOME: "/data/hermes" }, "/home/u", hermesAt("/data/hermes")),
+    join("/data/hermes", "skills"),
+  );
+  // $HERMES_HOME set but absent on disk → not a Hermes host; fall back.
+  assert.equal(
+    defaultUserSkillsDir({ HERMES_HOME: "/data/hermes" }, "/home/u", () => false),
+    join("/home/u", ".claude", "skills"),
+  );
+});
+
+test("defaultUserSkillsDir prefers the running harness: CLAUDECODE wins over ~/.hermes on disk", () => {
+  assert.equal(
+    defaultUserSkillsDir({ CLAUDECODE: "1" }, "/home/u", () => true),
+    join("/home/u", ".claude", "skills"),
+  );
+  // Explicit override still beats everything.
+  assert.equal(
+    defaultUserSkillsDir(
+      { CLAUDECODE: "1", AI_POWER_GUILD_SKILLS_DIR: "/custom/skills" },
+      "/home/u",
+      () => true,
+    ),
+    "/custom/skills",
+  );
 });
 
 test("every bootstrap skill folder actually exists in the repo with a SKILL.md", async () => {
