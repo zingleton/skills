@@ -70,19 +70,27 @@ install do you degrade to the file-only scaffold below — and when you do, say
 plainly what's **deferred** (guild connect, git access, the portable `repo/`) and
 that installing Node + git and re-running unlocks them. Once Node is present, run
 `node ../guild-connect/scripts/doctor.mjs` as the deeper check (Node ≥ 18 + git;
-it prints fixes if either is missing). If `guild-connect` handed you `forgejoHost`
-and `username` (from `git-setup`), keep them for step 2.
+it prints fixes if either is missing). This skill is self-contained — it runs at
+any time, on its own, and does not assume guild onboarding just happened. The
+`forgejoHost` + `username` that step 2 needs come from running `git-setup.mjs`
+there, not from a handoff.
 
 Ask where to create the project. Default to `PersonalChiefOfStaff` in the current
 directory if the member has no preference. If a `CLAUDE.md` already exists there,
 stop and confirm before overwriting (the scaffold refuses without `force: true` —
 surface that, don't blindly force).
 
-### 2. Clone the personal repo (when git access is set up)
+### 2. Clone the personal repo (consume guild-connect's plumbing)
 
 The portable `repo/` (memory + skills + Tools) comes from `guild-connect`'s
-`repo-setup.mjs`, not this skill's scaffold. When `git-setup` has run and you
-have the member's `forgejoHost` + `username`:
+scripts, not this skill's scaffold — this skill only *consumes* them:
+
+- **If `<project>/repo/.git` already exists**, the repo is set up — go straight
+  to step 3.
+- **Otherwise**, when the guild account is connected and git is available, get
+  the member's `forgejoHost` + `username` by running
+  `node ../guild-connect/scripts/git-setup.mjs` (safe to re-run: it replaces
+  this device's git token rather than accumulating), then clone:
 
 ```
 node ../guild-connect/scripts/repo-setup.mjs '{
@@ -94,8 +102,10 @@ node ../guild-connect/scripts/repo-setup.mjs '{
 
 It clones `personal` into `<project>/repo` and seeds `memory/`, `skills/`,
 `Tools/` (seed-only-if-absent; it never clobbers an already-populated repo and
-never re-mints the git token). Run it BEFORE scaffold so `repo/skills` exists for
-the `.claude/skills` link.
+never re-mints the git token). A second clone of the same personal repo — say,
+one guild-connect's onboarding made at another path — is fine; clones sync
+through ordinary git push/pull. Run it BEFORE scaffold so `repo/skills` exists
+for the `.claude/skills` link.
 
 **Degrade gracefully.** If git isn't set up, `repo-setup` isn't available, or the
 clone fails, skip this step and still scaffold — the COF is usable without the

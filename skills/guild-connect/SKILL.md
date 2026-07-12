@@ -125,13 +125,12 @@ Start with **Step 0 (prerequisites)** at the shell, then run `doctor.mjs` as the
      package manager, no rights, the command errors, or the member declines —
      fall back to **guided manual install**: give the official installer link
      (https://nodejs.org , https://git-scm.com/downloads), have them install and
-     reopen the terminal, then re-check. If they still can't or won't, **degrade
-     to a file-only setup**: connect/intake/profile/git/repo all need Node or git,
-     so the only thing you can do now is offer the Chief of Staff scaffold
-     (`claudecof-setup` writes files without Node — see its preflight). State
-     plainly what's **deferred** (guild connect, git access, the portable `repo/`)
-     and how to **resume**: install Node + git, reopen the terminal, and re-run
-     the onboarding one-liner — the idempotent flow picks up the deferred steps.
+     reopen the terminal, then re-check. If they still can't or won't, **stop
+     cleanly**: connect/intake/profile/git/repo all need Node or git, so there
+     is nothing left to run. State plainly what's **deferred** (guild connect,
+     git access, the portable `repo/`) and how to **resume**: install Node +
+     git, reopen the terminal, and re-run the onboarding one-liner — the
+     idempotent flow picks up the deferred steps.
    - **doctor.mjs failures route here too.** Once Node can run, a `doctor.mjs`
      check with `ok: false` (git missing, or Node too old) means the same thing —
      take it into this install branch rather than just surfacing the `fix` line
@@ -201,24 +200,22 @@ Start with **Step 0 (prerequisites)** at the shell, then run `doctor.mjs` as the
    image to a local file, describe what it shows, get explicit approval, then
    `avatar.mjs upload <file>`. Never upload an unapproved or undescribed
    image.
-7. **Git access, then the Personal Chief of Staff (Claude Code only).** Once the
-   member has a saved profile (`profile.mjs get` returns a non-null `profile`)
-   **and** you are running inside Claude Code with the sibling `claudecof-setup`
-   skill available in this plugin:
+7. **Git access, then the personal repo (platform-neutral).** Once the member
+   has a saved profile (`profile.mjs get` returns a non-null `profile`):
    - Run `git-setup.mjs` to install the durable git credential (see "Git access"
-     below), and **capture its stdout `{forgejoHost, username}`** — these get
-     threaded onward so nothing has to re-mint the git token.
-   - Offer the Chief of Staff setup plainly (e.g. "Want me to set up a Personal
-     Chief of Staff seeded from your guild profile?"). If the member says yes,
-     invoke `claudecof-setup`, **passing along `forgejoHost` and `username`** from
-     git-setup. That skill picks the project location, clones the member's
-     `personal` repo into `<project>/repo` via `repo-setup.mjs` (using those
-     values — never re-fetching them), and scaffolds a personalized `CLAUDE.md`
-     that reuses the profile and interests you just gathered.
-   - **Skip it** when there is no saved profile yet, when `claudecof-setup`
-     isn't available, or when you are not in Claude Code — that skill scaffolds
-     a Claude Code project and only makes sense there. Don't push if the member
-     declines; this is a suggestion, not part of the account setup.
+     below), and **capture its stdout `{forgejoHost, username}`** — `repo-setup`
+     consumes these so nothing has to re-mint the git token.
+   - Offer to set up the member's **portable personal repo** — the durable layer
+     (memory/skills/Tools) that follows them across machines and AI
+     environments. Ask where to put it (suggest `~/ai-power-guild`, which puts
+     the clone at `~/ai-power-guild/repo`), then run `repo-setup.mjs` with
+     `{targetDir, forgejoHost, username}`. Safe to re-run; it never clobbers an
+     existing clone.
+   - **Skip it** when there is no saved profile yet, or when the member
+     declines — this is a suggestion, not part of the account setup. Declining
+     is never a dead end: skills that build on the repo (e.g. the Personal
+     Chief of Staff project from the skills catalog) run `repo-setup` themselves
+     when they need it.
 8. **Make the skills durable (Claude Code).** The skills work this session; offer
    the member **two equal ways** to keep them for every future session, and let
    them choose:
@@ -228,11 +225,13 @@ Start with **Step 0 (prerequisites)** at the shell, then run `doctor.mjs` as the
      `claude plugin install ai-power-guild@guild-skills`. Cleanest ongoing
      permissions; update later with `claude plugin update ai-power-guild@guild-skills`.
    - **In-session (user-scope install).** Run `node scripts/install-skills.mjs` to
-     copy `guild-connect`, `claudecof-setup`, and `guild-memory` into
-     `~/.claude/skills/`. It may need a one-time permission grant (it writes
-     user-scope config); re-running it is the update path.
-   Either way, remind them memory is the opt-in `guild-memory` skill — off until
-   they activate it for a project. (Skip when not in Claude Code.)
+     copy the bootstrap pair — `guild-connect` and `guild-skills` (the catalog
+     installer) — into `~/.claude/skills/`. It may need a one-time permission
+     grant (it writes user-scope config); re-running it is the update path.
+   Either way, everything beyond the bootstrap pair (the Personal Chief of Staff
+   setup, portable memory, …) comes from the skills catalog afterwards via
+   `guild-skills install`, and memory stays opt-in — off until the member
+   activates it for a project. (Skip when not in Claude Code.)
 
 ## Hard rules
 

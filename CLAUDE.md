@@ -34,7 +34,7 @@ unclear, read the app's route handlers and its `llms.txt` rather than guessing.
 .claude-plugin/plugin.json   Plugin manifest (name, version, author)
 .claude-plugin/marketplace.json  Marketplace "guild-skills" — makes the repo installable
 skills/
-  guild-connect/             Connect + onboarding skill (intake + profile + avatar)
+  guild-connect/             Connect + onboarding skill (intake + profile + avatar + git access + personal repo)
     SKILL.md                 Skill instructions and contract
     scripts/*.mjs            Zero-dependency Node 18+ scripts (machine-readable JSON on stdout)
       install-skills.mjs     Copies the guild skills → ~/.claude/skills/ (user-scope install + update path)
@@ -91,7 +91,7 @@ the `guild-catalog` skill itself (see `docs/skills-catalog-migration.md`).
 **Onboarding offers two equal install paths.** The paste-able instruction
 (`docs/onboarding-prompt.md`) runs onboarding from the skill's choreography, then
 at the end offers two equal ways to make the skills durable: **in-session**
-`install-skills.mjs` (copies `guild-connect`, `claudecof-setup`, `guild-memory`
+`install-skills.mjs` (copies the bootstrap pair `guild-connect` + `guild-skills`
 into `~/.claude/skills/`; re-run to update), or the **terminal** marketplace
 plugin (`claude plugin marketplace add zingleton/skills` →
 `claude plugin install ai-power-guild@guild-skills`; cleanest ongoing

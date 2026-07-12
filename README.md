@@ -25,7 +25,7 @@ with `guild-skills`):
 ## Getting set up — two equal paths
 
 Pick whichever fits. Both end in the same place (connected account → intake +
-profile → git → optional Personal Chief of Staff). Requires
+profile → git access → optional portable personal repo). Requires
 [Claude Code](https://code.claude.com), **Node 18+, and git** on your PATH.
 
 - **Option A — paste an AI prompt** (no terminal): set up right now, inside a

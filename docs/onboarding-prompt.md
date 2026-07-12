@@ -22,18 +22,20 @@ That's the whole prompt. The detailed steps live in the skill itself
 At the end, onboarding offers **two equal ways** to keep the skills for future
 sessions:
 
-- **In-session:** run `install-skills.mjs`, which installs `guild-connect`,
-  `claudecof-setup`, and `guild-memory` into `~/.claude/skills/` (re-run to
-  update). May need a one-time permission grant.
+- **In-session:** run `install-skills.mjs`, which installs the bootstrap pair —
+  `guild-connect` and `guild-skills` (the catalog installer) — into
+  `~/.claude/skills/` (re-run to update). May need a one-time permission grant.
 - **Terminal (durable):** paste into a terminal — **not** a running session —
   `claude plugin marketplace add zingleton/skills` then
   `claude plugin install ai-power-guild@guild-skills`. Cleanest ongoing
   permissions.
 
 End state: a connected account, your intake + public profile filled in, git
-access, and (if you want it) a Personal Chief of Staff project seeded from your
-profile. Memory stays **off** — it's the opt-in `guild-memory` skill, activated
-per project only when you ask.
+access, and (if you want it) your portable personal repo cloned locally. The
+Personal Chief of Staff is a catalog skill — install it any time afterwards
+("install the Chief of Staff setup from the guild catalog"). Memory stays
+**off** — it's the opt-in `guild-memory` skill, activated per project only when
+you ask.
 
 Needs [Claude Code](https://code.claude.com). **Node 18+** and **git** are also
 required, but you don't have to install them yourself first — if either is
