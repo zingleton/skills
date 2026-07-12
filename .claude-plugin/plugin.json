@@ -1,7 +1,7 @@
 {
   "name": "ai-power-guild",
   "description": "Bootstrap for the AI Power Guild app (pg.singleton.ai): connect an AI environment to a member's account and install the guild-skills catalog installer. Role and Chief-of-Staff skills are installed on demand from the catalog.",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "author": {
     "name": "Andy Singleton",
     "email": "andy@singleton.ai"

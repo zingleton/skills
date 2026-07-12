@@ -25,14 +25,17 @@ export { ReconnectRequired };
 /**
  * A non-2xx API response, reduced to safe fields: `status`, the server's
  * friendly `{error}` copy as `message` (or a generic fallback — raw bodies
- * are never echoed), and the machine-readable `{reason}` when present.
+ * are never echoed), the machine-readable `{reason}` when present, and — on
+ * duplicate-conflict 409s — the whitelisted `{existing}` identity object
+ * (string scalars only; anything else is stripped).
  */
 export class ApiError extends Error {
-  constructor(status, message, reason) {
+  constructor(status, message, reason, existing) {
     super(message || `Request failed (HTTP ${status}).`);
     this.name = "ApiError";
     this.status = status;
     this.reason = reason ?? null;
+    this.existing = existing ?? null;
   }
 }
 
@@ -47,6 +50,23 @@ const REQUEST_TIMEOUT_MS = 30_000;
 // credential-file read (every command is its own process — see runCommand).
 let bannerToken = null;
 
+/**
+ * Whitelist a duplicate-conflict `existing` object down to its string-scalar
+ * fields (the contract carries identities like `{id}` / `{id, slug}`). A
+ * non-object, an empty result, or nested values yield null — never a raw
+ * passthrough.
+ */
+function safeExisting(value) {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  const out = {};
+  for (const [k, v] of Object.entries(value)) {
+    if (typeof v === "string") out[k] = v;
+  }
+  return Object.keys(out).length > 0 ? out : null;
+}
+
 async function safeErrorFields(response) {
   // Parse JSON if possible and keep ONLY the contract fields. A non-JSON or
   // off-contract body yields nulls → generic message.
@@ -55,9 +75,10 @@ async function safeErrorFields(response) {
     return {
       error: typeof body?.error === "string" ? body.error : null,
       reason: typeof body?.reason === "string" ? body.reason : null,
+      existing: safeExisting(body?.existing),
     };
   } catch {
-    return { error: null, reason: null };
+    return { error: null, reason: null, existing: null };
   }
 }
 
@@ -117,8 +138,8 @@ export async function apiRequest(path, opts = {}) {
   }
 
   if (!response.ok) {
-    const { error, reason } = await safeErrorFields(response);
-    throw new ApiError(response.status, error, reason);
+    const { error, reason, existing } = await safeErrorFields(response);
+    throw new ApiError(response.status, error, reason, existing);
   }
   return response.json();
 }
@@ -219,6 +240,7 @@ export async function runCommand(fn) {
     if (err instanceof ApiError) {
       const out = { ok: false, error: err.message };
       if (err.reason) out.reason = err.reason;
+      if (err.existing) out.existing = err.existing;
       if (err.reason === "already_has_submission") {
         out.hint =
           "A submission already exists — switch to edit mode: use interests.mjs get/set instead of intake.mjs create. " +
@@ -227,6 +249,14 @@ export async function runCommand(fn) {
       if (err.reason === "catalog_changed") {
         out.hint =
           "The catalog changed mid-interview — re-fetch options with intake.mjs options --fresh (cache-busting), re-confirm changed items, then retry.";
+      }
+      if (err.reason === "duplicate_title") {
+        out.hint =
+          "The post already exists — use existing.id instead of reposting. Do not retry the create.";
+      }
+      if (err.reason === "stale_precondition") {
+        out.hint =
+          "The item changed since it was read — re-read it, re-merge the edit onto the fresh copy, and retry with the new updatedAt.";
       }
       await writeFlushed(process.stdout, `${JSON.stringify(out, null, 2)}\n`);
       await writeFlushed(process.stderr, `${err.message}\n`);
