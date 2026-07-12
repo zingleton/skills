@@ -42,6 +42,44 @@ way (strength 2–3 as desired). Entries are created at strength 0 (hidden) if
 `strength` is omitted; set `strength` explicitly to publish, or raise it later
 with `PATCH /api/skills-catalog/manage/<id>`.
 
+## Seed the guide management skills (guild-content, guild-catalog)
+
+After the app's content-manage API and the plugin's 0.6.0 release ship
+(content-manage U6–U8), seed the two guide-facing skills the same way —
+visible strength is safe: the management APIs 403 non-guides, and the
+descriptions say "as a guide or admin". Once `guild-catalog` itself is seeded
+and installed, later curation can go through it instead of raw API calls
+(`node scripts/add.mjs <payload.json>`).
+
+```
+# resolve the pin (the commit you just reviewed/released)
+git -C <zingleton/skills checkout> rev-parse HEAD
+
+{
+  "slug": "guild-content",
+  "name": "Guild content management",
+  "description": "For guides and admins: find, post, edit, and retract guild news and reviews from your AI client.",
+  "sourceRepo": "zingleton/skills",
+  "sourcePath": "skills/guild-content",
+  "pinnedCommit": "<sha>",
+  "strength": 2
+}
+
+{
+  "slug": "guild-catalog",
+  "name": "Skills catalog curation",
+  "description": "For guides and admins: add, edit, re-pin, and remove skills-catalog entries and their role/task targeting.",
+  "sourceRepo": "zingleton/skills",
+  "sourcePath": "skills/guild-catalog",
+  "pinnedCommit": "<sha>",
+  "strength": 2
+}
+```
+
+Deploy order for the whole feature: `supabase db push` (migration 0031) → app
+deploy (content routes + llms.txt) → skills-repo release (this plugin) → seed
+these entries.
+
 ## Seed the first role package (AI-powered investor, R14)
 
 Once the app-side and installer ship, catalogue the investor-pack skills the

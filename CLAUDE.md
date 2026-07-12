@@ -53,6 +53,15 @@ skills/
     scripts/*.mjs            catalog, install, uninstall, promote, status, update, harvest +
                              shared scopes/lockfile/fetch-skill (imports guild-connect api/creds)
     tests/*.test.mjs         Unit tests (node --test)
+  guild-content/             Guide/admin content management (content-manage U6)
+    SKILL.md                 Find / post / edit / retract choreography + confirmation rules
+    scripts/*.mjs            list, get, post, edit, retract (imports guild-connect api/creds;
+                             post/retract enforce a --confirm flag)
+    tests/*.test.mjs         Unit tests (node --test)
+  guild-catalog/             Guide/admin catalog curation (content-manage U7)
+    SKILL.md                 Add / edit / re-pin / remove choreography (pins, strength, targeting)
+    scripts/*.mjs            list, add, edit, repin, remove (SHA-only pins; remove enforces --confirm)
+    tests/*.test.mjs         Unit tests (node --test)
 docs/onboarding-prompt.md    The single paste-able onboarding instruction (user-scope install)
 CLAUDE.md                    This file
 package.json                 npm test → unit tests for all skills
@@ -66,15 +75,18 @@ import `guild-connect`'s `credentials.mjs` / `api.mjs` via
 `../../guild-connect/scripts/`.
 
 **Bootstrap vs. catalog (skills-delivery U8, R13).** The marketplace plugin and
-the in-session `install-skills.mjs` now bootstrap only two skills:
+the in-session `install-skills.mjs` bootstrap only two skills:
 `guild-connect` (connect/credentials) and `guild-skills` (the catalog
-installer). The **Chief of Staff setup** (`claudecof-setup`) and **portable
-memory** (`guild-memory`) are no longer auto-installed — they ship as
-**catalog entries** and are installed on demand with `guild-skills install`.
-Their skill folders stay in this repo because the catalog pins point at them
-(`zingleton/skills` @ a curator-evaluated commit). Create/curate those catalog
-entries through the app's `POST /api/skills-catalog/manage` API with a
-guide/admin credential (see `docs/skills-catalog-migration.md`).
+installer). Everything else — the **Chief of Staff setup** (`claudecof-setup`),
+**portable memory** (`guild-memory`), and the guide-facing **`guild-content`**
+and **`guild-catalog`** management skills — ships as **catalog entries** and is
+installed on demand with `guild-skills install`. Their skill folders stay in
+this repo because the catalog pins point at them (`zingleton/skills` @ a
+curator-evaluated commit). The guide skills are harmless to seed at visible
+strength: the management APIs 403 non-guides, and their descriptions say "as a
+guide or admin". Create/curate catalog entries through the app's
+`POST /api/skills-catalog/manage` API with a guide/admin credential — or with
+the `guild-catalog` skill itself (see `docs/skills-catalog-migration.md`).
 
 **Onboarding offers two equal install paths.** The paste-able instruction
 (`docs/onboarding-prompt.md`) runs onboarding from the skill's choreography, then

@@ -1,16 +1,26 @@
 # AI Power Guild — Claude Code Plugin
 
 Agent skills that connect Claude Code to the [AI Power Guild](https://pg.singleton.ai)
-app and help members get set up. The plugin bundles:
+app and help members get set up. The plugin bootstraps two skills:
 
 - **`guild-connect`** — connect this environment to your guild account and run
   AI-led onboarding (intake interview, public profile, photo).
+- **`guild-skills`** — browse and install guild-catalog skills, keep them
+  updated, and harvest personalized copies to your personal repo.
+
+The repo also hosts the skills the catalog delivers on demand (install them
+with `guild-skills`):
+
 - **`claudecof-setup`** — scaffold a personalized "Personal Chief of Staff"
   project (a customized `CLAUDE.md` + memory system), pre-filled from your guild
   profile when it's connected.
 - **`guild-memory`** — opt-in portable memory (backed by the Guild's Hindsight
   server). Off until you activate it for a chosen project; onboarding never turns
   it on.
+- **`guild-content`** — for guides and admins: find, post, edit, and retract
+  guild content (news and reviews) from your AI client.
+- **`guild-catalog`** — for guides and admins: curate the skills catalog (add,
+  edit, re-pin, remove entries and their role/task targeting).
 
 ## Getting set up — two equal paths
 
