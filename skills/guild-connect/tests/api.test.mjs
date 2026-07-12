@@ -108,6 +108,45 @@ test("non-2xx with a JSON {error} body → ApiError carrying ONLY the error fiel
   assert.ok(!String(err.message).includes("raw-secret-body-content"));
 });
 
+test("a duplicate-conflict 409 passes `existing` through, whitelisted to string scalars", async () => {
+  freshCredPath();
+  await writeCredentials(sampleCreds());
+  const fetchSpy = async () =>
+    jsonResponse(409, {
+      error: "You published an item with this title moments ago.",
+      reason: "duplicate_title",
+      existing: {
+        id: "11111111-1111-1111-1111-111111111111",
+        slug: "kept-too",
+        count: 5, // non-string scalar → stripped
+        nested: { secret: "raw-body-material" }, // nested → stripped
+      },
+    });
+  const err = await getJson("/api/content/manage", { fetch: fetchSpy }).catch((e) => e);
+  assert.ok(err instanceof ApiError);
+  assert.deepEqual(err.existing, {
+    id: "11111111-1111-1111-1111-111111111111",
+    slug: "kept-too",
+  });
+  assert.ok(!JSON.stringify(err.existing).includes("raw-body-material"));
+});
+
+test("an off-contract `existing` (non-object or no string fields) becomes null", async () => {
+  freshCredPath();
+  await writeCredentials(sampleCreds());
+  const asString = async () =>
+    jsonResponse(409, { error: "x", existing: "not-an-object" });
+  const err1 = await getJson("/api/profile", { fetch: asString }).catch((e) => e);
+  assert.equal(err1.existing, null);
+
+  freshCredPath();
+  await writeCredentials(sampleCreds());
+  const noStrings = async () =>
+    jsonResponse(409, { error: "x", existing: { n: 1, deep: {} } });
+  const err2 = await getJson("/api/profile", { fetch: noStrings }).catch((e) => e);
+  assert.equal(err2.existing, null);
+});
+
 test("request timeout → ApiError 'Request timed out. Try again.' (no credential clearing)", async () => {
   const p = freshCredPath();
   await writeCredentials(sampleCreds());
