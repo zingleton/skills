@@ -149,8 +149,9 @@ Start with **Step 0 (prerequisites)** at the shell, then run `doctor.mjs` as the
      the web and were shown (or emailed) an email + 6-digit code — skip `send`
      and go straight to `connect.mjs verify <email> <code>`. If that returns
      `bad_code` (the code expired or was already used), point them at the
-     **Connect your AI** page (linked from their profile) to get a fresh code,
-     then verify that. A terminal `send <email>` also works if they'd rather.
+     **Start** page (the "Start" link in the app sidebar), whose "Connect your
+     AI" panel mints a fresh code, then verify that. A terminal `send <email>`
+     also works if they'd rather.
    - Otherwise, use the email the member gave you in the request (only ask if
      they didn't supply one), then `connect.mjs send <email>`.
    - On `sent`, ask the member to read the 6-digit code from the NEWEST email
